@@ -21,10 +21,12 @@ public:
 
 	static const Move no_move;
 
-	const int DEFAULT_MAX_STEPS = 40;
+	static const int DEFAULT_MAX_STEPS = 40;
 	const int SIDE = 4;
 
-	Board();
+	Board():Board(DEFAULT_MAX_STEPS) { }
+
+	Board(int maxSteps);
 
 	Board(const Board& other) = default;
 

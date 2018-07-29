@@ -11,6 +11,10 @@ class ElderChessGameServer(object):
     def init_board(self):
         self.board = Board(self.initial_board)
 
+    def reset_player(self, *players):
+        for player in players:
+            player.reset_player()
+
     def graphic(self, board):
         """Draw the board and show game info"""
         print(board)
@@ -24,6 +28,7 @@ class ElderChessGameServer(object):
     def start_play(self, player1, player2, temp=1., is_shown=True):
         """start a game between two players"""
         self.init_board()
+        self.reset_player(player1, player2)
         players = {0: player1, 1: player2}
         if is_shown:
             self.graphic(self.board)
@@ -58,6 +63,7 @@ class ElderChessGameServer(object):
         and store the self-play data: (state, mcts_probs, z) for training
         """
         self.init_board()
+        self.reset_player(player)
         states, mcts_probs, current_players = [], [], []
         while True:
             move, move_probs = player.get_action(self.board,

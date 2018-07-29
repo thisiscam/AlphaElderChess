@@ -4,8 +4,9 @@
 
 namespace elder_chess {
 
-Board::Board()
-	:hiddenPiecesCount(Board::SIDE * Board::SIDE) 
+Board::Board(int maxSteps) :
+	maxSteps(maxSteps),
+	hiddenPiecesCount(Board::SIDE * Board::SIDE) 
 {
 	for(int i = 0; i < Board::SIDE; i++) {
 		for(int j = 0; j < Board::SIDE; j++) {

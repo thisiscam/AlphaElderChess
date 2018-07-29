@@ -20,7 +20,7 @@ class MCTSPlayer(object):
         # the pi vector returned by MCTS as in the alphaGo Zero paper
         move_probs = np.zeros(5 * 4 * 4)
         if len(board.get_moves()) > 0:
-            acts, probs = self.mcts.get_move_probs(board, temp)
+            acts, probs = self.mcts.get_move_probs(board)
             probs = np.array(probs)
             if self._is_selfplay:
                 # add Dirichlet Noise for exploration (needed for
@@ -35,7 +35,11 @@ class MCTSPlayer(object):
                 # with the default temp=1e-3, it is almost equivalent
                 # to choosing the move with the highest prob
                 print(probs)
-                move_index = np.random.choice(len(acts), p=probs)
+                if board.remaining_steps() < 26:
+                    print("choosing with max prob")
+                    move_index = np.argmax(probs)
+                else:
+                    move_index = np.random.choice(len(acts), p=probs)
                 # reset the root node
                 self.mcts.update_with_move_index(board, move_index)
 #                location = board.move_to_location(move)

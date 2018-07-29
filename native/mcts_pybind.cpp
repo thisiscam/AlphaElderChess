@@ -46,6 +46,7 @@ static CompactState get_compact_state(const Board& board) {
 PYBIND11_MODULE(elder_chess_native, m) {
 	py::class_<Board>(m, "Board")
 		.def(py::init<>())
+        .def(py::init<int>())
         .def(py::init<const Board&>())
 		.def("do_move", &Board::do_move)
 		.def("get_moves", &Board::get_moves)
@@ -65,6 +66,7 @@ PYBIND11_MODULE(elder_chess_native, m) {
 		    stream << board;
 		    return stream.str();
 		})
+		.def("remaining_steps", &Board::remaining_steps)
 		.def("get_moves_one_hot", [](const Board& board) {
 			std::vector<Move> moves = board.get_moves();
 			py::array_t<unsigned int> ret({5, 4, 4});

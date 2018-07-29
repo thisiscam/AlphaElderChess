@@ -58,7 +58,7 @@ void MCTS<State>::_playout(State state) {
 }
 
 template<typename State>
-std::pair<std::vector<typename State::Move>, std::vector<double>> MCTS<State>::get_move_probs(State& state, double temp) {
+std::pair<std::vector<typename State::Move>, std::vector<double>> MCTS<State>::get_move_probs(State& state) {
 	for(int i = 0; i < _n_playout; i++) {
 		_playout(state);
 	}
@@ -66,7 +66,7 @@ std::pair<std::vector<typename State::Move>, std::vector<double>> MCTS<State>::g
 	std::vector<typename State::Move> moves(_current_root->_children.size());
 	std::vector<double> counts(_current_root->_children.size());
 	for(int i = 0; i < _current_root->_children.size(); i++) {
-		double c = pow((double)_current_root->_children[i].second->_n_visit, 1. / temp);
+		double c = (double)_current_root->_children[i].second->_n_visit;
 		counts[i] = c;
 		moves[i] = _current_root->_children[i].first;
 		sum += c;
