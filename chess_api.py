@@ -4,6 +4,11 @@ from elder_chess_game_server import ElderChessGameServer
 from tensorflow_policy import PolicyValueNet
 
 from xmlrpc.server import SimpleXMLRPCServer
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--model', type=str, default="models/best_policy.model", help='model path')
+args = parser.parse_args()
 
 FLIP = 0
 UP = 1
@@ -31,7 +36,7 @@ def try_parse(cmd):
 class MyObject:
 
     def __init__(self):
-        self.policy_value_net = PolicyValueNet(4, 4, model_file="models/best_policy.model")
+        self.policy_value_net = PolicyValueNet(4, 4, model_file=args.model)
         self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value, c_puct=5, n_playout=10000, is_selfplay=False)
 
     def start_game(self):

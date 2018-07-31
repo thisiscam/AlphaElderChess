@@ -2,4 +2,4 @@ cmake_minimum_required(VERSION 2.8.12)
 project(example)
 
 add_subdirectory(pybind11)
-pybind11_add_module(elder_chess_native mcts_pybind.cpp Move.cpp Board.cpp)
+pybind11_add_module(elder_chess_native mcts_pybind.cpp Move.cpp)

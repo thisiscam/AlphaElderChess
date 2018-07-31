@@ -12,7 +12,7 @@ args = parser.parse_args()
 
 def mcts_player():
     policy_value_net = PolicyValueNet(4, 4, model_file="models/best_policy.model")
-    return MCTSPlayer(policy_value_net.policy_value, c_puct=5, n_playout=10000, is_selfplay=False)
+    return MCTSPlayer(policy_value_net.policy_value, c_puct=5, n_playout=100000, is_selfplay=False)
 
 def mcts_player2():
     policy_value_net = PolicyValueNet(4, 4, model_file="models/best_policy.model")

@@ -48,8 +48,10 @@ void MCTS<State>::_playout(State state) {
 		int player = players[i];
 		if(player == last_player) {
 			it->update(leaf_value);
+			leaf_value *= 0.99;
 		} else if (player == 1 - last_player) {
 			it->update(-leaf_value);
+			leaf_value *= 0.99;
 		} else {
 			it->update(0.);
 		}
@@ -58,30 +60,50 @@ void MCTS<State>::_playout(State state) {
 }
 
 template<typename State>
-std::pair<std::vector<typename State::Move>, std::vector<double>> MCTS<State>::get_move_probs(State& state) {
+std::pair<std::vector<typename State::Move>, std::vector<double>> MCTS<State>::get_move_probs(State& state, bool small_temp) {
 	for(int i = 0; i < _n_playout; i++) {
 		_playout(state);
 	}
-	double sum = 0.;
-	std::vector<typename State::Move> moves(_current_root->_children.size());
-	std::vector<double> counts(_current_root->_children.size());
-	for(int i = 0; i < _current_root->_children.size(); i++) {
-		double c = (double)_current_root->_children[i].second->_n_visit;
-		counts[i] = c;
-		moves[i] = _current_root->_children[i].first;
-		sum += c;
+	if(small_temp) {
+		std::vector<typename State::Move> moves(_current_root->_children.size());
+		std::vector<double> counts(_current_root->_children.size());
+		int max_c = -1;
+		int max_idx = 0;
+		for(int i = 0; i < _current_root->_children.size(); i++) {
+			int c = _current_root->_children[i].second->_n_visit;
+			moves[i] = _current_root->_children[i].first;
+			if(c > max_c) {
+				max_idx = i;
+				max_c = c;
+			}
+		}
+		counts[max_idx] = 1.;
+		return std::make_pair(moves, counts);
+	} else {
+		double sum = 0.;
+		std::vector<typename State::Move> moves(_current_root->_children.size());
+		std::vector<double> counts(_current_root->_children.size());
+		for(int i = 0; i < _current_root->_children.size(); i++) {
+			double c = (double)_current_root->_children[i].second->_n_visit;
+			counts[i] = c;
+			moves[i] = _current_root->_children[i].first;
+			sum += c;
+		}
+		for(int i = 0; i < _current_root->_children.size(); i++) {
+			counts[i] /= sum;
+		}
+		return std::make_pair(moves, counts);
 	}
-	for(int i = 0; i < _current_root->_children.size(); i++) {
-		counts[i] /= sum;
-	}
-	return std::make_pair(moves, counts);
 }
 
 template<typename State>
 void MCTS<State>::update_with_move_index(State curState, unsigned int move_index) {
 	curState.do_move(_current_root->_children[move_index].first);
 	State& nextState = curState;
-	_current_root = _current_root->_children[move_index].second;
+	TreeNode<State>* new_root = _current_root->_children[move_index].second;
+	// _current_root->_children[move_index].second = nullptr;
+	// delete _current_root;
+	_current_root = new_root;
 	if(nextState.is_env_move() && _current_root->is_leaf()) {
 		_current_root->expand(nextState.get_env_move_weights());
 	}

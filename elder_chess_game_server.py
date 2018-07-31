@@ -58,7 +58,7 @@ class ElderChessGameServer(object):
                         print("Game end. Tie")
                 return players[winner] if winner >= 0 else None
 
-    def start_self_play(self, player, is_shown=0, temp=1e-3):
+    def start_self_play(self, player, is_shown=False, temp=1e-3):
         """ start a self-play game using a MCTS player, reuse the search tree,
         and store the self-play data: (state, mcts_probs, z) for training
         """
@@ -93,7 +93,7 @@ class ElderChessGameServer(object):
                 player.reset_player()
                 if is_shown:
                     if winner >= 0:
-                        print("Game end. Winner is player:", players[winner])
+                        print("Game end. Winner is player:", winner)
                     else:
                         print("Game end. Tie")
                 return player if winner >= 0 else None, zip(states, mcts_probs, winners_z)

@@ -5,11 +5,6 @@
 
 namespace elder_chess {
 
-void 
-Move::execute(Board* board) {
-	board->do_move(*this);
-}
-
 void
 Move::print(std::ostream &os) {
 	if(type == Move::Type::FLIP) {

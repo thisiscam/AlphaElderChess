@@ -6,8 +6,6 @@
 
 namespace elder_chess {
 
-class Board;
-
 class Move final /* : public Action<Board> */ {
 public:
 	enum class Type : unsigned int {
@@ -48,8 +46,6 @@ public:
 		std::istringstream strm(m_str);
 		*this = Move::parse(strm);
 	}
-
-	void execute(Board* board);
 
 	void print(std::ostream &os);
 

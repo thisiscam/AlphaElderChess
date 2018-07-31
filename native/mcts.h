@@ -65,7 +65,7 @@ public:
 
 	~MCTS() { delete _root; }
 
-	std::pair<std::vector<typename State::Move>, std::vector<double>> get_move_probs(State& state);
+	std::pair<std::vector<typename State::Move>, std::vector<double>> get_move_probs(State& state, bool small_temp=false);
 
     void update_with_move_index(State curState, unsigned int move_index);
     void update_with_move(const State& nextState, Move move);

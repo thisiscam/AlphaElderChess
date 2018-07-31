@@ -8,6 +8,9 @@ class HumanPlayer(object):
     def __init__(self):
         pass
 
+    def reset_player(self):
+        pass
+
     def other_do_move(self, nextBoard, move):
         pass
 

@@ -18,7 +18,9 @@ std::default_random_engine mcts::rng(time(0));
 
 typedef std::tuple<py::array_t<double>, py::array_t<double>, double> CompactState;
 
-static CompactState get_compact_state(const Board& board) {
+typedef Board<false> Board_;
+
+static CompactState get_compact_state(const Board_& board) {
 	py::array_t<double> ret({ 3, 4, 4 });
 	auto buf = ret.mutable_unchecked<3>();
 	memset(buf.mutable_data(0, 0, 0), 0, buf.nbytes());
@@ -44,30 +46,30 @@ static CompactState get_compact_state(const Board& board) {
 }
 
 PYBIND11_MODULE(elder_chess_native, m) {
-	py::class_<Board>(m, "Board")
+	py::class_<Board_>(m, "Board")
 		.def(py::init<>())
         .def(py::init<int>())
-        .def(py::init<const Board&>())
-		.def("do_move", &Board::do_move)
-		.def("get_moves", &Board::get_moves)
-		.def("get_winner", [](const Board &board) {
+        .def(py::init<const Board_&>())
+		.def("do_move", &Board_::do_move)
+		.def("get_moves", &Board_::get_moves)
+		.def("get_winner", [](const Board_ &board) {
 			return (int)board.get_winner();
 		})
-		.def("get_current_player", &Board::get_current_player)
-		.def("is_env_move", &Board::is_env_move)
-		.def("game_ended", &Board::game_ended)
-		.def("env_do_move", [](Board& board) { return board.env_do_move(&rng); })
-		.def("do_move_with_env", [](Board& board, Move m) { return board.do_move_with_env(m, &rng); })
-		.def("do_move_with_env_safe", [](Board& board, Move m) { return board.do_move_with_env_safe(m, &rng); })
-		.def("do_move_safe", [](Board& board, Move m) { return board.do_move_safe(m, &rng); })
+		.def("get_current_player", &Board_::get_current_player)
+		.def("is_env_move", &Board_::is_env_move)
+		.def("game_ended", &Board_::game_ended)
+		.def("env_do_move", [](Board_& board) { return board.env_do_move(&rng); })
+		.def("do_move_with_env", [](Board_& board, Move m) { return board.do_move_with_env(m, &rng); })
+		.def("do_move_with_env_safe", [](Board_& board, Move m) { return board.do_move_with_env_safe(m, &rng); })
+		.def("do_move_safe", [](Board_& board, Move m) { return board.do_move_safe(m, &rng); })
 		.def("get_compact_state", &get_compact_state)
-		.def("__str__", [](const Board &board) {
+		.def("__str__", [](const Board_ &board) {
 			std::ostringstream stream;
 		    stream << board;
 		    return stream.str();
 		})
-		.def("remaining_steps", &Board::remaining_steps)
-		.def("get_moves_one_hot", [](const Board& board) {
+		.def("remaining_steps", &Board_::remaining_steps)
+		.def("get_moves_one_hot", [](const Board_& board) {
 			std::vector<Move> moves = board.get_moves();
 			py::array_t<unsigned int> ret({5, 4, 4});
 			auto buf = ret.mutable_unchecked<3>();
@@ -85,6 +87,7 @@ PYBIND11_MODULE(elder_chess_native, m) {
 			return new Move((Move::Type)type, x, y);
 		}))
 		.def(py::self == py::self)
+		.def("by_env", [](const Move& move) { return move.type != Move::Type::ENV_RAND; })
 		.def("__str__", [](const Move &move) {
 			std::ostringstream stream;
 		    stream << move;
@@ -94,11 +97,11 @@ PYBIND11_MODULE(elder_chess_native, m) {
 
 	typedef std::function<std::pair<py::array_t<double>, double>(const CompactState&)> PolicyNetworkF;
 
-    py::class_<MCTS<Board>>(m, "MCTS")
-        // .def(py::init<const MCTS<Board>::PolicyFunction&, double, unsigned int>())
+    py::class_<MCTS<Board_>>(m, "MCTS")
+        // .def(py::init<const MCTS<Board_>::PolicyFunction&, double, unsigned int>())
         .def(py::init([](const PolicyNetworkF& policy_f, double c_puct, unsigned int n_playout) {
-        	return new MCTS<Board>(
-        		[policy_f](const Board& b) {
+        	return new MCTS<Board_>(
+        		[policy_f](const Board_& b) {
         			auto&& move_probs_and_value = policy_f(get_compact_state(b));
         			py::array_t<double> move_probs = move_probs_and_value.first;
         			double value = move_probs_and_value.second;
@@ -116,14 +119,14 @@ PYBIND11_MODULE(elder_chess_native, m) {
         		n_playout
         	);
         }))
-        .def("get_move_probs", &MCTS<Board>::get_move_probs)
-        .def("update_with_move", &MCTS<Board>::update_with_move)
-        .def("update_with_move_index", &MCTS<Board>::update_with_move_index)
-        .def("reset", &MCTS<Board>::reset)
+        .def("get_move_probs", &MCTS<Board_>::get_move_probs)
+        .def("update_with_move", &MCTS<Board_>::update_with_move)
+        .def("update_with_move_index", &MCTS<Board_>::update_with_move_index)
+        .def("reset", &MCTS<Board_>::reset)
     ;
 
     m.def("move_probs_to_one_hot", 
-    	[](const std::vector<Board::Move>& moves, const std::vector<double>& probs) {
+    	[](const std::vector<Board_::Move>& moves, const std::vector<double>& probs) {
 			py::array_t<double> ret({5, 4, 4});
 			auto buf = ret.mutable_unchecked<3>();
 			memset(buf.mutable_data(0, 0, 0), 0, buf.nbytes());

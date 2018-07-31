@@ -13,6 +13,7 @@
 
 namespace elder_chess {
 
+template<bool dynamic_steps>
 class Board final /* : public State */ {
 
 public:
@@ -21,7 +22,7 @@ public:
 
 	static const Move no_move;
 
-	static const int DEFAULT_MAX_STEPS = 40;
+	static const int DEFAULT_MAX_STEPS = dynamic_steps ? 8 : 40 ;
 	const int SIDE = 4;
 
 	Board():Board(DEFAULT_MAX_STEPS) { }
@@ -46,7 +47,9 @@ public:
 		return board[i][j];
 	}
 
-	inline const int remaining_steps() const { return maxSteps - steps; }
+	inline const int remaining_steps() const {
+		return maxSteps - steps;
+	}
 
 	inline void do_move(Move m);
 
@@ -110,7 +113,7 @@ private:
 	Move about_to_flip = Move(Move::Type::NONE, 0, 0);
 
 	int steps = 0;
-	int maxSteps = DEFAULT_MAX_STEPS;
+	int maxSteps;
 	Piece board[4][4];
 
 	std::vector<Piece> hiddenPieces;

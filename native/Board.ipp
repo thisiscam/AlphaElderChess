@@ -1,4 +1,5 @@
-inline bool Board::_canEat(const Piece& from, const Piece& to) const {
+template<bool ds>
+bool Board<ds>::_canEat(const Piece& from, const Piece& to) const {
 	if(from.value == 0 && to.value == 3) {
 		return true;
 	} if(from.value == 3 && to.value == 0) {
@@ -10,7 +11,8 @@ inline bool Board::_canEat(const Piece& from, const Piece& to) const {
 	}
 }
 
-inline bool Board::_piecesDominating(Side player) const {
+template<bool ds>
+bool Board<ds>::_piecesDominating(Side player) const {
 	if(onBoardPieces[player][0] > 0) {
 		if(onBoardPieces[1 - player][0] == 0 && onBoardPieces[1 - player][1] == 0 && onBoardPieces[1 - player][2] == 0) {
 			return true;
@@ -34,7 +36,8 @@ inline bool Board::_piecesDominating(Side player) const {
 	return false;
 }
 
-inline Side Board::get_winner() const {
+template<bool ds>
+Side Board<ds>::get_winner() const {
 	std::vector<Move> p0Moves = _scanAvailableMoves(Sides::PLAYER_0);
 	if(p0Moves.size() == 0) {
 		return Sides::PLAYER_1;
@@ -62,7 +65,8 @@ inline Side Board::get_winner() const {
 	return Sides::NONE;
 }
 
-inline bool Board::_currentIsEnvironment() const {
+template<bool ds>
+bool Board<ds>::_currentIsEnvironment() const {
 	return get_current_player() < 0;
 }
 
@@ -70,7 +74,8 @@ inline bool Board::_currentIsEnvironment() const {
 /*
 	Assumes that board[i][j].side == currentPlayer
 */
-inline bool Board::_checkMoveable(int i, int j, int di, int dj) const {
+template<bool ds>
+bool Board<ds>::_checkMoveable(int i, int j, int di, int dj) const {
 	int ti = i + di;
 	int tj = j + dj;
 	if(ti >= 0 && ti < SIDE && tj >= 0 && tj < SIDE) {
@@ -90,7 +95,8 @@ inline bool Board::_checkMoveable(int i, int j, int di, int dj) const {
 	}
 }
 
-inline std::vector<Move> Board::_scanAvailableMoves(Side side) const { 
+template<bool ds>
+std::vector<Move> Board<ds>::_scanAvailableMoves(Side side) const { 
 	assert(side >= 0);
 	std::vector<Move> moves;
 	for(int i=0; i < SIDE; i++) {
@@ -116,7 +122,8 @@ inline std::vector<Move> Board::_scanAvailableMoves(Side side) const {
 	return moves;
 }
 
-inline void Board::_removeHidden(Piece p) {
+template<bool ds>
+void Board<ds>::_removeHidden(Piece p) {
 	int foundIdx = -1;
 	for(int i = 0; i < hiddenPieces.size(); i++) {
 		if(hiddenPieces[i] == p) {
@@ -137,14 +144,19 @@ inline void Board::_removeHidden(Piece p) {
 	}
 }
 
-inline void Board::_sync_on_board(int x, int y) {
+template<bool ds>
+void Board<ds>::_sync_on_board(int x, int y) {
 	Piece p = board[x][y];
 	if(!p.isEmpty()) {
 		onBoardPieces[p.getSide()][p.value] --;
+		if(ds) {
+			steps = 0;
+		}
 	}
 }
 
-inline void Board::do_move(Move m) {
+template<bool ds>
+void Board<ds>::do_move(Move m) {
 	switch(m.type) {
 		case Move::Type::ENV_RAND: {
 			int x = about_to_flip.x;
@@ -154,12 +166,19 @@ inline void Board::do_move(Move m) {
 			about_to_flip = Move(Move::Type::NONE, 0, 0);
 			player_to_move = 1 - (- (player_to_move + 1));
 			board[x][y] = p;
+			if(ds) {
+				steps = 1;
+			}
 			break;
 		}
 		case Move::Type::FLIP: {
 			about_to_flip = m;
 			player_to_move = - player_to_move - 1;
-			steps++;
+			if(ds) {
+				steps = 0;
+			} else {
+				steps++;
+			}
 			break;
 		}
 		case Move::Type::UP: {
@@ -201,7 +220,8 @@ inline void Board::do_move(Move m) {
 	}
 }
 
-inline std::vector<Move> Board::get_moves() const {
+template<bool ds>
+std::vector<Move> Board<ds>::get_moves() const {
 	if(_currentIsEnvironment()) {
 		std::vector<Move> moves;
 		std::transform(
@@ -216,7 +236,8 @@ inline std::vector<Move> Board::get_moves() const {
 	}
 }
 
-inline std::vector<std::pair<Move, double>> Board::get_env_move_weights() const {
+template<bool ds>
+std::vector<std::pair<Move, double>> Board<ds>::get_env_move_weights() const {
 	assert(_currentIsEnvironment());
 	std::vector<std::pair<Move, double>> weights(hiddenPieces.size());
 	for(int i = 0; i < hiddenPieces.size(); i++) {
@@ -225,16 +246,19 @@ inline std::vector<std::pair<Move, double>> Board::get_env_move_weights() const 
 	return weights;
 }
 
-inline bool Board::is_env_move() const {
+template<bool ds>
+bool Board<ds>::is_env_move() const {
 	return player_to_move < 0;
 }
 
-inline bool Board::game_ended() const {
+template<bool ds>
+bool Board<ds>::game_ended() const {
 	return get_winner() != Sides::NONE;
 }
 
+template<bool ds>
 template<typename RandomEngine>
-Move Board::env_do_move(RandomEngine* engine) {
+Move Board<ds>::env_do_move(RandomEngine* engine) {
 	assert(_currentIsEnvironment());
 	std::uniform_int_distribution<int> rnds(0, hiddenPiecesCount - 1);
     int rnd = rnds(*engine);
@@ -251,16 +275,18 @@ Move Board::env_do_move(RandomEngine* engine) {
     return m;
 }
 
+template<bool ds>
 template<typename RandomEngine>
-void Board::do_move_with_env(Move m, RandomEngine *engine) {
+void Board<ds>::do_move_with_env(Move m, RandomEngine *engine) {
 	do_move(m);
 	if(m.type == Move::Type::FLIP) {
 		env_do_move(engine);
 	}
 }
 
+template<bool ds>
 template<typename RandomEngine>
-bool Board::do_move_with_env_safe(Move m, RandomEngine* engine) {
+bool Board<ds>::do_move_with_env_safe(Move m, RandomEngine* engine) {
 	assert(!_currentIsEnvironment());
 	std::vector<Move> moves = _scanAvailableMoves(get_current_player());
 	if(std::find(moves.begin(), moves.end(), m) == moves.end()) {
@@ -271,8 +297,9 @@ bool Board::do_move_with_env_safe(Move m, RandomEngine* engine) {
 	}
 }
 
+template<bool ds>
 template<typename RandomEngine>
-bool Board::do_move_safe(Move m, RandomEngine* engine) {
+bool Board<ds>::do_move_safe(Move m, RandomEngine* engine) {
 	assert(!_currentIsEnvironment());
 	std::vector<Move> moves = _scanAvailableMoves(get_current_player());
 	if(std::find(moves.begin(), moves.end(), m) == moves.end()) {
@@ -283,8 +310,9 @@ bool Board::do_move_safe(Move m, RandomEngine* engine) {
 	}
 }
 
+template<bool ds>
 template<typename RandomEngine>
-Move Board::do_random_move(RandomEngine *engine) {
+Move Board<ds>::do_random_move(RandomEngine *engine) {
 	if(_currentIsEnvironment()) {
 		return env_do_move(engine);
 	} else {
@@ -296,7 +324,55 @@ Move Board::do_random_move(RandomEngine *engine) {
 	}
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Board& board) {
+template<bool ds>
+Board<ds>::Board(int maxSteps) :
+	maxSteps(maxSteps),
+	hiddenPiecesCount(Board::SIDE * Board::SIDE) 
+{
+	for(int i = 0; i < Board::SIDE; i++) {
+		for(int j = 0; j < Board::SIDE; j++) {
+			board[i][j] = Piece::hidden();
+		}
+	}
+	for(int i = 0; i < 4; i++) {
+		hiddenPieces.push_back(Piece(Sides::PLAYER_0, i));
+		hiddenPiecesCounts.push_back(2);
+		hiddenPieces.push_back(Piece(Sides::PLAYER_1, i));
+		hiddenPiecesCounts.push_back(2);
+
+		onBoardPieces[Sides::PLAYER_0][i] = 2;
+		onBoardPieces[Sides::PLAYER_1][i] = 2;
+	}
+}
+
+template<bool ds>
+void Board<ds>::print(std::ostream &os) const {
+	os << "turn " << steps << "/" << maxSteps << "  Rem: " << remaining_steps() <<std::endl;
+	os << (get_current_player() == Sides::PLAYER_0 ? "W" : "B") << " | 0| 1| 2| 3|" << std::endl;
+	for(int i = 0; i < 4; i++) {
+		os << i << " |";
+		for(int j = 0; j < 4; j++) {
+			os << at(i, j) << "|";
+		}
+		os << std::endl;
+	}
+	os << "W[1~4]:"; 
+	for(int i = 0; i < 4; i++) {
+		os << onBoardPieces[Sides::PLAYER_0][i] << "|";
+	}
+	os << std::endl;
+	os << "B[1~4]:";
+	for(int i = 0; i < 4; i++) {
+		os << onBoardPieces[Sides::PLAYER_1][i] << "|";
+	}
+	os << std::endl;
+}
+
+template<bool ds>
+const Move Board<ds>::no_move = Move(Move::Type::NONE, -1, -1);
+
+template<bool ds>
+inline std::ostream& operator<<(std::ostream& os, const Board<ds>& board) {
 	board.print(os);
 	return os;
 }
