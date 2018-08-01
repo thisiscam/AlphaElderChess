@@ -37,49 +37,68 @@ class MyObject:
 
     def __init__(self):
         self.policy_value_net = PolicyValueNet(4, 4, model_file=args.model)
-        self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value, c_puct=5, n_playout=10000, is_selfplay=False)
+        self.boards = {}
+        self.mcts_players = {}
 
-    def start_game(self):
-        self.board = Board()
-        print(self.board)
-        self.mcts_player.reset_player()
+    def start_game(self, id, n_playout=10000):
+        self.boards[id] = Board()
+        if id in self.mcts_players:
+            self.mcts_players[id].reset_player()
+        else:
+            self.mcts_players[id] = MCTSPlayer(self.policy_value_net.policy_value, c_puct=5, n_playout=n_playout, is_selfplay=False)
 
-    def make_move(self, move_str):
+    def _get_game(self, id):
+        if id not in self.boards or id not in self.mcts_players:
+            raise Exception("id not found")
+        board = self.boards[id]
+        mcts_player = self.mcts_players[id]
+        return board, mcts_player
+
+    def check_game_started(self, id):
+        try:
+            self._get_game(id)
+            return True
+        except:
+            print(id, "game not started")
+            return False
+
+    def make_move(self, id, move_str):
+        board, mcts_player = self._get_game(id)
         try:
             move = try_parse(move_str)
             print(move)
         except:
             return False
-        if self.board.do_move_safe(move):
-            print(self.board)
-            self.mcts_player.other_do_move(self.board, move)
-            print("other done")
-            if self.board.is_env_move():
-                print("env start")
-                env_move = self.board.env_do_move()
-                print("env done")
-                self.mcts_player.other_do_move(self.board, env_move)
-                print("mcts done")
+        if board.do_move_safe(move):
+            print(board)
+            mcts_player.other_do_move(board, move)
+            if board.is_env_move():
+                env_move = board.env_do_move()
+                mcts_player.other_do_move(board, env_move)
             return True
         else:
             return False
 
-    def ai_make_move(self):
-        move = self.mcts_player.get_action(self.board)
-        if self.board.do_move_safe(move):
-            if self.board.is_env_move():
-                env_move = self.board.env_do_move()
-                self.mcts_player.other_do_move(self.board, env_move)
+    def ai_make_move(self, id):
+        board, mcts_player = self._get_game(id)
+        move = mcts_player.get_action(board)
+        if board.do_move_safe(move):
+            if board.is_env_move():
+                env_move = board.env_do_move()
+                mcts_player.other_do_move(board, env_move)
         return str(move)
 
-    def display_board(self):
-        return str(self.board)
+    def display_board(self, id):
+        board, _ = self._get_game(id)
+        return str(board)
 
-    def get_winner(self):
-        return self.board.get_winner()
+    def get_winner(self, id):
+        board, _ = self._get_game(id)
+        return board.get_winner()
 
-    def game_ended(self):
-        return self.board.game_ended()
+    def game_ended(self, id):
+        board, _ = self._get_game(id)
+        return board.game_ended()
 
 obj = MyObject()
 server = SimpleXMLRPCServer(("127.0.0.1", 1027), allow_none=True)
