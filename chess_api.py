@@ -36,7 +36,7 @@ def try_parse(cmd):
 class MyObject:
 
     def __init__(self):
-        self.policy_value_net = PolicyValueNet(4, 4, model_file=args.model)
+        self.policy_value_net = PolicyValueNet(model_file=args.model)
         self.boards = {}
         self.mcts_players = {}
 

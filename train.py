@@ -9,17 +9,84 @@ from __future__ import print_function
 import random
 import numpy as np
 from collections import defaultdict, deque
-from elder_chess_native import Board
+from elder_chess_native import Board, random_seed
 from elder_chess_game_server import ElderChessGameServer
 from mcts_player import MCTSPlayer
 # from policy_value_net import PolicyValueNet  # Theano and Lasagne
 # from policy_value_net_pytorch import PolicyValueNet  # Pytorch
-from tensorflow_policy import PolicyValueNet # Tensorflow
+from tensorflow_policy import get_local_server, PolicyValueNet # Tensorflow
 # from policy_value_net_keras import PolicyValueNet # Keras
 
+import multiprocessing
+
+current_model_path = "models/current_model.model"
+best_model_path = "models/best_policy.model"
+
+multiprocessing.set_start_method("spawn", force=True)
+
+class PolicyEvaluator():
+    
+    def __init__(self, job_queue, out_queue, c_puct, n_playout, current_model_path, best_model_path):
+        self.board = Board()
+        self.game = ElderChessGameServer(self.board)
+
+        self.server = get_local_server()
+        self.policy_value_net = PolicyValueNet(server=self.server)
+        self.duplicate_policy_value_net = PolicyValueNet(server=self.server)
+
+        self.job_queue = job_queue
+        self.out_queue = out_queue
+
+        self.c_puct = c_puct
+        self.n_playout = n_playout
+        self.current_model_path = current_model_path
+        self.best_model_path = best_model_path
+
+        self.name = multiprocessing.current_process()
+
+    def start_listen(self):
+        while True:
+            print(self.name, "start listen", flush=True)
+            job_type, job_args = self.job_queue.get(True)
+            print(self.name, "got", (job_type, job_args), flush=True)
+            if job_type == "eval":
+                start_i, end_i = job_args
+                self.out_queue.put(self.policy_evaluate(start_i, end_i), False)
+            if job_type == "done":
+                print(self.name, "is done", flush=True)
+                return
+
+    def policy_evaluate(self, start_i, end_i):
+        self.policy_value_net.restore_model(self.current_model_path)
+        self.duplicate_policy_value_net.restore_model(self.best_model_path)
+
+        current_mcts_player = MCTSPlayer(self.policy_value_net.policy_value,
+                                         c_puct=self.c_puct,
+                                         n_playout=self.n_playout, name="Current")
+        old_mcts_player = MCTSPlayer(self.duplicate_policy_value_net.policy_value,
+                                         c_puct=self.c_puct,
+                                         n_playout=self.n_playout, name="Old")
+
+        win_cnt = [0] * 3
+        for i in range(start_i, end_i):
+            if i % 2 == 0:
+                p1, p2 = current_mcts_player, old_mcts_player
+            else:
+                p1, p2 = old_mcts_player, current_mcts_player
+            winner = self.game.start_play(p1, p2, temp=1., is_shown=True)
+            if winner == current_mcts_player:
+                win_cnt[0] += 1
+            elif winner == old_mcts_player:
+                win_cnt[1] += 1
+            else:
+                win_cnt[2] += 1
+            # print("{}: game {} winner is {}".format(self.name, i, winner.name if winner else "tie"))
+        win_ratio = 1.0*(win_cnt[0] + 0.5*win_cnt[2]) / (end_i - start_i)
+        print("Process {} --- win: {}, lose: {}, tie:{}, win_ratio: {}".format(self.name, win_cnt[0], win_cnt[1], win_cnt[2], win_ratio), flush=True)
+        return win_cnt
 
 class TrainPipeline():
-    def __init__(self, init_model=None):
+    def __init__(self, eval_n_threads=1, init_model=None, current_model_path=current_model_path, best_model_path=best_model_path):
         # params of the board and the game
         self.board_width = 4
         self.board_height = 4
@@ -39,31 +106,54 @@ class TrainPipeline():
         self.epochs = 5  # num of train_steps for each update
         self.kl_targ = 0.02
         self.check_freq = 50
-        self.game_batch_num = 1500
-        self.best_win_ratio = 0.0
+        self.game_batch_num = 3000
         self.win_ratio_cutoff = 0.55
+        # misc
         self.eval_n_games = 20
+        self.eval_n_threads = eval_n_threads
+        self.current_model_path = current_model_path
+        self.best_model_path = best_model_path
+        self.jobs_launched = False
         if init_model:
             print("starting from model: ", init_model)
             # start training from an initial policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height,
-                                                   model_file=init_model)
+            self.policy_value_net = PolicyValueNet(model_file=init_model)
         else:
             # start training from a new policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height)
-        self.duplicate_policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height)
-        self.backup_policy()
+            self.policy_value_net = PolicyValueNet()
         self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value,
                                       c_puct=self.c_puct,
                                       n_playout=self.n_playout,
                                       is_selfplay=True)
+    def start_workers(self):
+        self.processes = []
+        self.job_queue = multiprocessing.Queue()
+        self.out_queue = multiprocessing.Queue()
+        for _ in range(self.eval_n_threads):
+            process = multiprocessing.Process(
+                target=TrainPipeline.worker_main, 
+                args=(self.job_queue, self.out_queue, self.c_puct, self.n_playout, self.current_model_path, self.best_model_path)
+            )
+            process.start()
+            self.processes.append(process)
 
-    def backup_policy(self):
-        self.policy_value_net.save_model("models/current_policy.model")
-        self.duplicate_policy_value_net.restore_model("models/current_policy.model")
+    def cleanup_workers(self):
+        print("cleaning up")
+        for _ in range(self.eval_n_threads):
+            self.job_queue.put(("done", None))
+        for process in self.processes:
+            process.join()
+
+    @staticmethod
+    def worker_main(in_queue, out_queue, c_puct, n_playout, current_model_path, best_model_path):
+        print(multiprocessing.current_process(), "working")
+        import time
+        seed1 = time.time() + os.getpid() + 42.7
+        seed2 = time.time() - os.getpid() + 61.9
+        np.random.seed(int(seed1))
+        random_seed(seed2) # re-seed each process
+        evaluator = PolicyEvaluator(in_queue, out_queue, c_puct, n_playout, current_model_path, best_model_path)
+        evaluator.start_listen()
 
     def rotate_moves(self, moves):
         moves = np.rot90(moves, 1, (1, 2))
@@ -157,33 +247,42 @@ class TrainPipeline():
                         explained_var_new))
         return loss, entropy
 
-    def policy_evaluate(self, n_games=10):
+    def policy_evaluate_async(self):
         """
         Evaluate the trained policy by playing against the pure MCTS player
         Note: this is only for monitoring the progress of training
         """
-        current_mcts_player = MCTSPlayer(self.policy_value_net.policy_value,
-                                         c_puct=self.c_puct,
-                                         n_playout=self.n_playout, name="Current")
-        old_mcts_player = MCTSPlayer(self.duplicate_policy_value_net.policy_value,
-                                         c_puct=self.c_puct,
-                                         n_playout=self.n_playout, name="Old")
-        win_cnt = {None: 0, current_mcts_player: 0, old_mcts_player: 0}
-        for i in range(n_games):
-            if i % 2 == 0:
-                p1, p2 = current_mcts_player, old_mcts_player
-            else:
-                p1, p2 = old_mcts_player, current_mcts_player
-            winner = self.game.start_play(p1, p2, temp=1., is_shown=True)
-            win_cnt[winner] += 1
-        win_ratio = 1.0*(win_cnt[current_mcts_player] + 0.5*win_cnt[None]) / n_games
-        print("win: {}, lose: {}, tie:{}".format(win_cnt[current_mcts_player], win_cnt[old_mcts_player], win_cnt[None]))
+        print("launching evaluate jobs")
+        self.jobs_launched = True
+        games_per_thread = self.eval_n_games // self.eval_n_threads
+        res_games = self.eval_n_games % self.eval_n_threads
+        games_per_thread = [games_per_thread + 1] * res_games + [games_per_thread] * (self.eval_n_threads - res_games)
+        start_i = 0
+        for n_games_per_thread in games_per_thread:
+            self.job_queue.put(("eval", (start_i, start_i + n_games_per_thread)))
+            start_i += n_games_per_thread
+
+    def policy_evaluate_sync(self):
+        if not self.jobs_launched:
+            return -1
+        print("syncing evaluated policies...")
+        win_cnt = np.zeros(3)
+        for _ in range(self.eval_n_threads):
+            wc = self.out_queue.get(True)
+            win_cnt += np.array(wc)
+
+        win_ratio = 1.0*(win_cnt[0] + 0.5*win_cnt[2]) / self.eval_n_games
+        print("Total --- win: {}, lose: {}, tie:{}".format(win_cnt[0], win_cnt[1], win_cnt[2]))
+        self.jobs_launched = False
         return win_ratio
 
     def run(self):
         """run the training pipeline"""
+        self.start_workers()
+
         try:
-            self.backup_policy()
+            self.policy_value_net.save_model(self.best_model_path)
+            self.policy_value_net.save_model(self.current_model_path)
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)
                 print("batch i:{}, episode_len:{}".format(
@@ -192,19 +291,20 @@ class TrainPipeline():
                     loss, entropy = self.policy_update()
 
                 if (i+1) % self.check_freq == 0:
-                    win_ratio = self.policy_evaluate(self.eval_n_games)
-                    if win_ratio >= self.win_ratio_cutoff:
+                    self.policy_value_net.save_model(self.current_model_path)
+                    self.policy_evaluate_async()
+                    win_rate = self.policy_evaluate_sync()
+                    if win_rate >= self.win_ratio_cutoff:
                         print("New best policy!!!!!!!!")
-                        self.policy_value_net.save_model(best_model_path)
-                        self.backup_policy()
-
+                        self.policy_value_net.save_model(self.best_model_path)
+                    
         except KeyboardInterrupt:
             print('\n\rquit')
+        
+        self.cleanup_workers()
 
 
 import os
-
-best_model_path = "models/best_policy.model"
 
 if __name__ == '__main__':
     if os.path.isfile(best_model_path+".meta"):

@@ -5,8 +5,8 @@ class MCTSPlayer(object):
     """AI player based on MCTS"""
 
     def __init__(self, policy_value_function,
-                 c_puct=5, n_playout=2000, is_selfplay=False, name=""):
-        self.mcts = MCTS(policy_value_function, c_puct, n_playout)
+                 c_puct=5, n_playout=2000, is_selfplay=False, name="", num_parallel_workers=1, parallel_mcts_eval_batch_size=1):
+        self.mcts = MCTS(policy_value_function, float(c_puct), n_playout, num_parallel_workers, parallel_mcts_eval_batch_size)
         self._is_selfplay = is_selfplay
         self.name = name
         self.steps = 0
@@ -20,13 +20,15 @@ class MCTSPlayer(object):
         if not move.by_env():
             self.steps += 1
 
-    def get_action(self, board, temp=1., return_prob=False):
+    def get_action(self, board, temp=1., return_prob=False, verbose=False):
         # the pi vector returned by MCTS as in the alphaGo Zero paper
         move_probs = np.zeros(5 * 4 * 4)
         if len(board.get_moves()) > 0:
-            small_temp = self.steps > 10
+            small_temp = self.steps > 10 and board.remaining_steps() > 5
             acts, probs = self.mcts.get_move_probs(board, small_temp)
             probs = np.array(probs)
+            if verbose:
+                print(probs, small_temp)
             if self._is_selfplay and small_temp:
                 # add Dirichlet Noise for exploration (needed for
                 # self-play training)
@@ -39,8 +41,6 @@ class MCTSPlayer(object):
             else:
                 # with the default temp=1e-3, it is almost equivalent
                 # to choosing the move with the highest prob
-                if not self._is_selfplay:
-                    print(probs, small_temp)
                 move_index = np.random.choice(len(acts), p=probs)
                 # reset the root node
                 self.mcts.update_with_move_index(board, move_index)

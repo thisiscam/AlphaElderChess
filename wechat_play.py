@@ -13,7 +13,7 @@ cam = bot.friends().search("Cam")[0]
 
 cam.send("Connected!")
 
-listen_to_usrs = ["超级赛亚源", "李京津", "额勒金德", "张小三", "唐鹏", "Cam", "null", "绅士是共通的", "王同学"]
+listen_to_usrs = ["超级赛亚源", "李京津", "额勒金德", "张小三", "唐鹏", "Cam", "null", "绅士是共通的", "王同学", "Kel"]
 listen_to_chats = []
 for user in listen_to_usrs:
 	users = bot.friends().search(user)

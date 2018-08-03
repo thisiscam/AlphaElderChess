@@ -23,7 +23,7 @@ public:
 	static const Move no_move;
 
 	static const int DEFAULT_MAX_STEPS = dynamic_steps ? 8 : 40 ;
-	const int SIDE = 4;
+	static const int SIDE = 4;
 
 	Board():Board(DEFAULT_MAX_STEPS) { }
 

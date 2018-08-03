@@ -9,11 +9,13 @@ Tested in Tensorflow 1.4 and 1.5
 import numpy as np
 import tensorflow as tf
 
+def get_local_server():
+    return tf.train.Server.create_local_server()
 
 class PolicyValueNet():
-    def __init__(self, board_width=4, board_height=4, model_file=None):
-        self.board_width = board_width
-        self.board_height = board_height
+    def __init__(self, model_file=None, server=None):
+        self.board_width = 4
+        self.board_height = 4
 
         self.graph = tf.Graph()
         with self.graph.as_default():
@@ -32,7 +34,7 @@ class PolicyValueNet():
             # Define the tensorflow neural network
             # 1. Input:
             self.input_states = tf.placeholder(
-                    tf.float32, shape=[None, 3, board_height, board_width],
+                    tf.float32, shape=[None, 3, self.board_height, self.board_width],
                     name="board_state"
                 )
             self.input_state = tf.transpose(self.input_states, [0, 2, 3, 1])
@@ -56,14 +58,14 @@ class PolicyValueNet():
                                                 activation=tf.nn.relu)
             # Flatten the tensor
             self.action_conv_flat = tf.reshape(
-                    self.action_conv, [-1, 4 * board_height * board_width])
+                    self.action_conv, [-1, 4 * self.board_height * self.board_width])
 
             self.action_conv_flat_aug = tf.concat([self.action_conv_flat, self.w1, self.w2], 1)
 
             # 3-2 Full connected layer, the output is the log probability of moves
             # on each slot on the board
             self.action_fc = tf.layers.dense(inputs=self.action_conv_flat_aug,
-                                             units=5 * board_height * board_width,
+                                             units=5 * self.board_height * self.board_width,
                                              activation=tf.nn.log_softmax)
             # 4 Evaluation Networks
             self.evaluation_conv = tf.layers.conv2d(inputs=self.conv3, filters=2,
@@ -72,7 +74,7 @@ class PolicyValueNet():
                                                     data_format="channels_last",
                                                     activation=tf.nn.relu)
             self.evaluation_conv_flat = tf.reshape(
-                    self.evaluation_conv, [-1, 2 * board_height * board_width])
+                    self.evaluation_conv, [-1, 2 * self.board_height * self.board_width])
 
             self.evaluation_conv_flat_aug = tf.concat([self.evaluation_conv_flat, self.w1, self.w2], 1)
 
@@ -92,7 +94,7 @@ class PolicyValueNet():
                                                            self.evaluation_fc2)
             # 3-2. Policy Loss function
             self.mcts_probs = tf.placeholder(
-                    tf.float32, shape=[None, 5 * board_height * board_width])
+                    tf.float32, shape=[None, 5 * self.board_height * self.board_width])
             self.policy_loss = tf.negative(tf.reduce_mean(
                     tf.reduce_sum(tf.multiply(self.mcts_probs, self.action_fc), 1)))
             # 3-3. L2 penalty (regularization)
@@ -119,7 +121,10 @@ class PolicyValueNet():
             self.saver = tf.train.Saver()
         
         # Make a session
-        self.session = tf.Session(graph=self.graph)
+        if server:
+            self.session = tf.Session(server.target, graph=self.graph)
+        else:
+            self.session = tf.Session(graph=self.graph)
 
         self.session.run(init)
 
@@ -131,14 +136,6 @@ class PolicyValueNet():
         input: a batch of states
         output: a batch of action probabilities and state values
         """
-        single_state = type(state_batch[2]) is float
-        if single_state:
-            # single state, reshape to batch
-            state_batch = (
-                state_batch[0].reshape((-1,) + state_batch[0].shape), 
-                state_batch[1].reshape((-1,) + state_batch[1].shape), 
-                np.array(state_batch[2]).reshape(-1, 1)
-            )
         log_act_probs, value = self.session.run(
                 [self.action_fc, self.evaluation_fc2],
                 feed_dict={
@@ -148,8 +145,6 @@ class PolicyValueNet():
                            }
                 )
         act_probs = np.exp(log_act_probs)
-        if single_state:
-            act_probs = act_probs.reshape(act_probs.shape[1])
         return act_probs, value
 
     def train_step(self, state_batch, mcts_probs, winner_batch, lr):

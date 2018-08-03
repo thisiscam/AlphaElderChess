@@ -36,7 +36,7 @@ class ElderChessGameServer(object):
         while True:
             current_player = self.board.get_current_player()
             player_in_turn = players[current_player]
-            move = player_in_turn.get_action(self.board, temp=temp)
+            move = player_in_turn.get_action(self.board, temp=temp, verbose=is_shown)
 
             if self.board.do_move_safe(move):
                 players[1 - current_player].other_do_move(self.board, move)
@@ -48,15 +48,17 @@ class ElderChessGameServer(object):
             if is_shown:
                 self.graphic(self.board)
             if self.board.game_ended():
+                winner = self.board.get_winner()
+                if winner == 2:
+                    winner = None
+                else:
+                    winner = players[winner]
                 if is_shown:
-                    winner = self.board.get_winner()
-                    if winner == 2:
-                        winner = -1
-                    if winner >= 0:
-                        print("Game end. Winner is", players[winner])
+                    if winner:
+                        print("Game end. Winner is", winner)
                     else:
                         print("Game end. Tie")
-                return players[winner] if winner >= 0 else None
+                return winner
 
     def start_self_play(self, player, is_shown=False, temp=1e-3):
         """ start a self-play game using a MCTS player, reuse the search tree,

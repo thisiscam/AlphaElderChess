@@ -14,7 +14,7 @@ class HumanPlayer(object):
     def other_do_move(self, nextBoard, move):
         pass
 
-    def get_action(self, board, temp=None):
+    def get_action(self, board, temp=None, verbose=False):
         try:
             s = input("[{}]Your move: ".format(self))
             move = Move(s)

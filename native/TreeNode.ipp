@@ -6,7 +6,7 @@ TreeNode<State>::~TreeNode() {
 }
 
 template<typename State>
-void TreeNode<State>::expand(std::vector<std::pair<typename State::Move, double>> priors) {
+void TreeNode<State>::expand(const std::vector<std::pair<typename State::Move, double>>& priors) {
 	for(auto& it : priors) {
 		_children.push_back(std::make_pair(it.first, new TreeNode(this, it.second)));
 	}
@@ -19,33 +19,26 @@ std::pair<typename State::Move, TreeNode<State>*> TreeNode<State>::select(double
 }
 
 template<typename State>
-std::pair<typename State::Move, TreeNode<State>*> TreeNode<State>::env_select() const {
+template<typename RandomEngine>
+std::pair<typename State::Move, TreeNode<State>*> TreeNode<State>::env_select(RandomEngine* rng) const {
 	std::vector<double> weights;
 	std::transform(
 		_children.begin(), _children.end(), std::back_inserter(weights), 
 		[](auto it) { return it.second->_prior; }
 	);
 	std::discrete_distribution<int> dist(std::begin(weights), std::end(weights));
-	return _children[dist(rng)];
+	return _children[dist(*rng)];
 }
 
 template<typename State>
 void TreeNode<State>::update(double leaf_value) {
 	_n_visit ++;
-	_Q += (leaf_value - _Q) / _n_visit;
-}
-
-template<typename State>
-void TreeNode<State>::update_recursive(double leaf_value) {
-	update(leaf_value);
-	if(!is_root()) {
-		_parent->update_recursive(leaf_value);
-	}
+	threading::atomic_add(_W, leaf_value);
 }
 
 template<typename State>
 double TreeNode<State>::get_U_value(double c_puct) const {
-	return _Q + (c_puct * _prior * sqrt((double)_parent->_n_visit) / (1 + _n_visit));
+	return (_W + c_puct * _prior * sqrt((double)_parent->_n_visit) - _virtual_loss) / (1 + _n_visit + _virtual_loss);
 }
 
 template<typename State>
@@ -56,4 +49,25 @@ bool TreeNode<State>::is_leaf() const {
 template<typename State>
 bool TreeNode<State>::is_root() const {
 	return _parent == nullptr;
+}
+
+template<typename State>
+void TreeNode<State>::lock() {
+	_lock.lock();
+}
+
+
+template<typename State>
+void TreeNode<State>::unlock() {
+	_lock.unlock();
+}
+
+template<typename State>
+void TreeNode<State>::add_virtual_loss() {
+	_virtual_loss++;
+}
+
+template<typename State>
+void TreeNode<State>::remove_virtual_loss() {
+	_virtual_loss--;
 }
