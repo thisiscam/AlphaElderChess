@@ -27,7 +27,7 @@ static void fill_compact_state(const Board_& board, double (&board_state)[3][4][
                 board_state[2][i][j] = 1.;
             } else if (!p.isEmpty()) {
                 int idx = p.getSide() == board.get_current_player() ? 0 : 1;
-                board_state[idx][i][j] = (p.value + 1) * (p.value + 1);
+                board_state[idx][i][j] = 1;
             }
         }
     }
@@ -52,10 +52,6 @@ static CompactState get_compact_state(const Board_& board) {
     double (&b2)[2][4] = (double (&)[2][4])*hiddens.mutable_unchecked<2>().mutable_data(0, 0);
 
     fill_compact_state(board, b1, b2, remaining_steps);
-    
-    py::print(ret);
-    py::print(hiddens);
-    std::cout << board << std::endl;
 
     return std::make_tuple(ret, hiddens, remaining_steps);
 }

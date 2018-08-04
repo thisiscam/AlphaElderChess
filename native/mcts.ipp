@@ -131,8 +131,8 @@ template<typename State>
 void MCTS<State>::_backprop_single_path(TreeNode<State>* node, double leaf_value, const std::vector<int>& players) {
     int last_player = players[players.size() - 1];
     TreeNode<State> *node_back_it = node;
-    node_back_it->remove_virtual_loss();
     for(int i = players.size() - 2; i >= 0; i--) {
+        node_back_it->remove_virtual_loss();
         int player = players[i];
         if(player == last_player) {
             node_back_it->update(leaf_value);
@@ -143,6 +143,7 @@ void MCTS<State>::_backprop_single_path(TreeNode<State>* node, double leaf_value
         }
         node_back_it = node_back_it->_parent;
     }
+    node_back_it->remove_virtual_loss();
 }
 
 
@@ -151,7 +152,7 @@ std::pair<std::vector<typename State::Move>, std::vector<double>> MCTS<State>::g
 
     threading::ThreadGroup tg(_pool);
     for(int i = 0; i < _thread_pool_size; i++) {
-        std::size_t n_playout = _n_playout / _thread_pool_size + (i < _n_playout % _thread_pool_size ? 1 : 0);
+        std::size_t n_playout = _n_playout / _thread_pool_size + (i < (_n_playout % _thread_pool_size) ? 1 : 0);
         tg.add_task([this, i, n_playout, &state]() {
             std::mt19937 rng(time(0) + i); 
             this->_playout_batch(state, n_playout, &rng); 

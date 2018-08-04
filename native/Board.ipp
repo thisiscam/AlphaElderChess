@@ -1,4 +1,25 @@
 template<bool ds>
+Board<ds>::Board(int maxSteps) :
+	maxSteps(maxSteps),
+	hiddenPiecesCount(Board::SIDE * Board::SIDE) 
+{
+	for(int i = 0; i < Board::SIDE; i++) {
+		for(int j = 0; j < Board::SIDE; j++) {
+			board[i][j] = Piece::hidden();
+		}
+	}
+	for(int i = 0; i < 4; i++) {
+		hiddenPieces.push_back(Piece(Sides::PLAYER_0, i));
+		hiddenPiecesCounts.push_back(2);
+		hiddenPieces.push_back(Piece(Sides::PLAYER_1, i));
+		hiddenPiecesCounts.push_back(2);
+
+		onBoardPieces[Sides::PLAYER_0][i] = 2;
+		onBoardPieces[Sides::PLAYER_1][i] = 2;
+	}
+}
+
+template<bool ds>
 bool Board<ds>::_canEat(const Piece& from, const Piece& to) const {
 	if(from.value == 0 && to.value == 3) {
 		return true;
@@ -321,27 +342,6 @@ Move Board<ds>::do_random_move(RandomEngine *engine) {
         Move m = moves[rnds(*engine)];
         do_move(m);
         return m;
-	}
-}
-
-template<bool ds>
-Board<ds>::Board(int maxSteps) :
-	maxSteps(maxSteps),
-	hiddenPiecesCount(Board::SIDE * Board::SIDE) 
-{
-	for(int i = 0; i < Board::SIDE; i++) {
-		for(int j = 0; j < Board::SIDE; j++) {
-			board[i][j] = Piece::hidden();
-		}
-	}
-	for(int i = 0; i < 4; i++) {
-		hiddenPieces.push_back(Piece(Sides::PLAYER_0, i));
-		hiddenPiecesCounts.push_back(2);
-		hiddenPieces.push_back(Piece(Sides::PLAYER_1, i));
-		hiddenPiecesCounts.push_back(2);
-
-		onBoardPieces[Sides::PLAYER_0][i] = 2;
-		onBoardPieces[Sides::PLAYER_1][i] = 2;
 	}
 }
 
