@@ -29,7 +29,9 @@ public:
 	~TreeNode();
 
 	void expand(const std::vector<std::pair<Move, double>>& priors);
-	std::pair<Move, TreeNode<State>*> select(double c_puct) const;
+
+	template<typename RandomEngine>
+	std::pair<Move, TreeNode<State>*> select(double c_puct, RandomEngine*) const;
 
 	template<typename RandomEngine>
 	std::pair<Move, TreeNode<State>*> env_select(RandomEngine*) const;
@@ -43,6 +45,9 @@ public:
     void unlock();
     void add_virtual_loss();
     void remove_virtual_loss();
+
+    /* Debug Utils */
+	void debug_check_n_visit();
 
 protected:
 	TreeNode<State>* const _parent;
@@ -70,7 +75,7 @@ public:
 
 	~MCTS();
 
-	std::pair<std::vector<typename State::Move>, std::vector<double>> get_move_probs(State& state, bool small_temp=false);
+	std::pair<std::vector<typename State::Move>, std::vector<std::uint16_t>> get_move_counts(State& state);
 
     void update_with_move_index(State curState, std::uint16_t move_index);
     void update_with_move(const State& nextState, Move move);
@@ -86,6 +91,8 @@ private:
 	void _playout_batch(const State& state, std::size_t n_playout, RandomEngine* rng);
 
 	void _backprop_single_path(TreeNode<State>* node, double leaf_value, const std::vector<int>& players);
+
+	void _remove_virtual_losses(TreeNode<State>* node);
 
 	void _eval_and_backprop_batch(const std::vector<TreeNode<State>*>& nodes, 
 		const std::vector<State>& states, 

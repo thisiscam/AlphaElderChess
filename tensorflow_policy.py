@@ -34,7 +34,7 @@ class PolicyValueNet():
             # Define the tensorflow neural network
             # 1. Input:
             self.input_states = tf.placeholder(
-                    tf.float32, shape=[None, 3, self.board_height, self.board_width],
+                    tf.float32, shape=[None, 9, self.board_height, self.board_width],
                     name="board_state"
                 )
             self.input_state = tf.transpose(self.input_states, [0, 2, 3, 1])
@@ -121,7 +121,7 @@ class PolicyValueNet():
             self.saver = tf.train.Saver()
         
         # Make a session
-        if server:
+        if server != None:
             self.session = tf.Session(server.target, graph=self.graph)
         else:
             self.session = tf.Session(graph=self.graph)

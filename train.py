@@ -73,7 +73,7 @@ class PolicyEvaluator():
                 p1, p2 = current_mcts_player, old_mcts_player
             else:
                 p1, p2 = old_mcts_player, current_mcts_player
-            winner = self.game.start_play(p1, p2, temp=1., is_shown=True)
+            winner = self.game.start_play(p1, p2, temp=1., is_shown=False)
             if winner == current_mcts_player:
                 win_cnt[0] += 1
             elif winner == old_mcts_player:
@@ -97,19 +97,19 @@ class TrainPipeline():
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
         self.temp = 1.0  # the temperature param
-        self.n_playout = 1000  # num of simulations for each move
+        self.n_playout = 3000  # num of simulations for each move
         self.c_puct = 5
-        self.buffer_size = 50000
-        self.batch_size = 512  # mini-batch size for training
+        self.buffer_size = 500000
+        self.batch_size = 2048  # mini-batch size for training
         self.data_buffer = deque(maxlen=self.buffer_size)
         self.play_batch_size = 1
         self.epochs = 5  # num of train_steps for each update
         self.kl_targ = 0.02
-        self.check_freq = 50
-        self.game_batch_num = 3000
-        self.win_ratio_cutoff = 0.55
+        self.check_freq = 100
+        self.game_batch_num = 5000
+        self.win_ratio_cutoff = 0.51
         # misc
-        self.eval_n_games = 20
+        self.eval_n_games = 120
         self.eval_n_threads = eval_n_threads
         self.current_model_path = current_model_path
         self.best_model_path = best_model_path
@@ -291,12 +291,12 @@ class TrainPipeline():
                     loss, entropy = self.policy_update()
 
                 if (i+1) % self.check_freq == 0:
-                    self.policy_value_net.save_model(self.current_model_path)
-                    self.policy_evaluate_async()
                     win_rate = self.policy_evaluate_sync()
                     if win_rate >= self.win_ratio_cutoff:
                         print("New best policy!!!!!!!!")
                         self.policy_value_net.save_model(self.best_model_path)
+                    self.policy_value_net.save_model(self.current_model_path)
+                    self.policy_evaluate_async()
                     
         except KeyboardInterrupt:
             print('\n\rquit')

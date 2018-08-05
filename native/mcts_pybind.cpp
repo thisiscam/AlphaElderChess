@@ -18,16 +18,16 @@ std::mt19937 rng(time(0));
 
 typedef Board<false> Board_;
 
-static void fill_compact_state(const Board_& board, double (&board_state)[3][4][4], double (&hiddens_state)[2][4], double &remaining_steps_state) {
+static void fill_compact_state(const Board_& board, double (&board_state)[9][4][4], double (&hiddens_state)[2][4], double &remaining_steps_state) {
     memset(&board_state, 0, sizeof(board_state));
     for(int i = 0; i < 4; i++) {
         for(int j = 0; j < 4; j++) {
             Piece p = board.at(i, j);
             if (p.isHidden()) {
-                board_state[2][i][j] = 1.;
+                board_state[0][i][j] = 1.;
             } else if (!p.isEmpty()) {
                 int idx = p.getSide() == board.get_current_player() ? 0 : 1;
-                board_state[idx][i][j] = 1;
+                board_state[idx * 4 + p.value][i][j] = 1.;
             }
         }
     }
@@ -44,11 +44,11 @@ static void fill_compact_state(const Board_& board, double (&board_state)[3][4][
 typedef std::tuple<py::array_t<double>, py::array_t<double>, double> CompactState;
 
 static CompactState get_compact_state(const Board_& board) {
-    py::array_t<double> ret({ 3, 4, 4 });
-    py::array_t<double> hiddens({2, 4});
+    py::array_t<double> ret({ 9, 4, 4 });
+    py::array_t<double> hiddens({ 2, 4 });
     double remaining_steps;
     
-    double (&b1)[3][4][4] = (double (&)[3][4][4])*ret.mutable_unchecked<3>().mutable_data(0, 0, 0);
+    double (&b1)[9][4][4] = (double (&)[9][4][4])*ret.mutable_unchecked<3>().mutable_data(0, 0, 0);
     double (&b2)[2][4] = (double (&)[2][4])*hiddens.mutable_unchecked<2>().mutable_data(0, 0);
 
     fill_compact_state(board, b1, b2, remaining_steps);
@@ -115,17 +115,17 @@ PYBIND11_MODULE(elder_chess_native, m) {
                 [policy_f, eval_batch_size]
                 (const std::vector<Board_>& boards, std::vector<MCTS<Board_>::EvalResult>& results, int batch_size, void* buffer) {
                     double* _board_states = (double*)buffer;
-                    double* _hiddens_states = _board_states + eval_batch_size * 3 * 4 * 4;
+                    double* _hiddens_states = _board_states + eval_batch_size * 9 * 4 * 4;
                     double* _remaining_steps_states = _hiddens_states + eval_batch_size * 2 * 4;
                     for(int i = 0; i < batch_size; i++) {
-                        fill_compact_state(boards[i], (double(&)[3][4][4])_board_states[i * 3 * 4 * 4], (double(&)[2][4])_hiddens_states[i * 2 * 4], _remaining_steps_states[i]);
+                        fill_compact_state(boards[i], (double(&)[9][4][4])_board_states[i * 3 * 4 * 4], (double(&)[2][4])_hiddens_states[i * 2 * 4], _remaining_steps_states[i]);
                     }
 
                     {
                         py::gil_scoped_acquire acquire;
 
                         py::object board_states = py::array_t<double, py::array::c_style>(
-                            {batch_size, 3, 4, 4}, 
+                            {batch_size, 9, 4, 4}, 
                             _board_states
                         );
                         py::object hiddens_states = py::array_t<double, py::array::c_style>(
@@ -141,6 +141,7 @@ PYBIND11_MODULE(elder_chess_native, m) {
                         auto values_buf = move_probs_and_value.second.unchecked<2>();
 
                         for(int i = 0; i < batch_size; i++) {
+                            assert(!boards[i].is_env_move());
                             std::vector<Move>&& available_moves = boards[i].get_moves();
                             MCTS<Board_>::EvalResult& result = results[i];
                             result.first.resize(available_moves.size());
@@ -152,14 +153,14 @@ PYBIND11_MODULE(elder_chess_native, m) {
                         }
                     }
                 },
-                (3 * 4 * 4) + (2 * 4) + (1),
+                (9 * 4 * 4) + (2 * 4) + (1),
                 c_puct,
                 n_playout,
                 thread_pool_size,
                 eval_batch_size
             );
         }))
-        .def("get_move_probs", &MCTS<Board_>::get_move_probs, py::call_guard<py::gil_scoped_release>())
+        .def("get_move_counts", &MCTS<Board_>::get_move_counts, py::call_guard<py::gil_scoped_release>())
         .def("update_with_move", &MCTS<Board_>::update_with_move)
         .def("update_with_move_index", &MCTS<Board_>::update_with_move_index)
         .def("reset", &MCTS<Board_>::reset)

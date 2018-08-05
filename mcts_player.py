@@ -1,6 +1,11 @@
 from elder_chess_native import MCTS, move_probs_to_one_hot
 import numpy as np
 
+def softmax(x):
+    probs = np.exp(x - np.max(x))
+    probs /= np.sum(probs)
+    return probs
+
 class MCTSPlayer(object):
     """AI player based on MCTS"""
 
@@ -20,21 +25,25 @@ class MCTSPlayer(object):
         if not move.by_env():
             self.steps += 1
 
+    def counts_to_move_probs(self, counts, temp=1.):
+        return softmax(1.0/temp * np.log(np.array(counts) + 1e-10))
+
     def get_action(self, board, temp=1., return_prob=False, verbose=False):
         # the pi vector returned by MCTS as in the alphaGo Zero paper
-        move_probs = np.zeros(5 * 4 * 4)
+
         if len(board.get_moves()) > 0:
-            small_temp = self.steps > 10 and board.remaining_steps() > 5
-            acts, probs = self.mcts.get_move_probs(board, small_temp)
-            probs = np.array(probs)
+            temp = 1e-3 if self.steps > 14 or not self._is_selfplay else 1.
+            acts, counts = self.mcts.get_move_counts(board)
+            probs = self.counts_to_move_probs(counts, temp)
+
             if verbose:
-                print(probs, small_temp)
-            if self._is_selfplay and small_temp:
+                print(counts)
+            if self._is_selfplay:
                 # add Dirichlet Noise for exploration (needed for
                 # self-play training)
                 move_index = np.random.choice(
                     len(acts),
-                    p=0.75*probs + 0.25*np.random.dirichlet(0.03*np.ones(len(probs)))
+                    p=0.75*probs + 0.25*np.random.dirichlet(0.03 * np.ones(len(probs)))
                 )
                 # update the root node and reuse the search tree
                 self.mcts.update_with_move_index(board, move_index)
