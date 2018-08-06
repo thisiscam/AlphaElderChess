@@ -21,17 +21,17 @@ typedef std::tuple<py::array_t<double>, py::array_t<double>, double> CompactStat
 typedef Board<false> Board_;
 
 static CompactState get_compact_state(const Board_& board) {
-	py::array_t<double> ret({ 3, 4, 4 });
+	py::array_t<double> ret({ 9, 4, 4 });
 	auto buf = ret.mutable_unchecked<3>();
 	memset(buf.mutable_data(0, 0, 0), 0, buf.nbytes());
 	for(int i = 0; i < 4; i++) {
 		for(int j = 0; j < 4; j++) {
 			Piece p = board.at(i, j);
 			if (p.isHidden()) {
-				buf(2, i, j) = 1.;
+				buf(8, i, j) = 1.;
 			} else if (!p.isEmpty()) {
 				int idx = p.getSide() == board.get_current_player() ? 0 : 1;
-				buf(idx, i, j) = 1.;
+				buf(idx * 4 + p.value, i, j) = 1.;
 			}
 		}
 	}
