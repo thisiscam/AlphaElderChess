@@ -50,13 +50,13 @@ class PolicyValueNet():
                                           data_format="channels_last",
                                           activation=tf.nn.relu)
             # 3-1 Action Networks
-            self.action_conv = tf.layers.conv2d(inputs=self.conv3, filters=4,
+            self.action_conv = tf.layers.conv2d(inputs=self.conv3, filters=6,
                                                 kernel_size=[1, 1], padding="same",
                                                 data_format="channels_last",
                                                 activation=tf.nn.relu)
             # Flatten the tensor
             self.action_conv_flat = tf.reshape(
-                    self.action_conv, [-1, 4 * board_height * board_width])
+                    self.action_conv, [-1, 6 * board_height * board_width])
 
             self.action_conv_flat_aug = tf.concat([self.action_conv_flat, self.w1, self.w2], 1)
 

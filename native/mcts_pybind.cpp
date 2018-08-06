@@ -18,7 +18,7 @@ std::default_random_engine mcts::rng(time(0));
 
 typedef std::tuple<py::array_t<double>, py::array_t<double>, double> CompactState;
 
-typedef Board<false> Board_;
+typedef Board<true> Board_;
 
 static CompactState get_compact_state(const Board_& board) {
 	py::array_t<double> ret({ 9, 4, 4 });
