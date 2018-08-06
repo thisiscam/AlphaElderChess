@@ -24,7 +24,7 @@ static void fill_compact_state(const Board_& board, double (&board_state)[9][4][
         for(int j = 0; j < 4; j++) {
             Piece p = board.at(i, j);
             if (p.isHidden()) {
-                board_state[0][i][j] = 1.;
+                board_state[8][i][j] = 1.;
             } else if (!p.isEmpty()) {
                 int idx = p.getSide() == board.get_current_player() ? 0 : 1;
                 board_state[idx * 4 + p.value][i][j] = 1.;

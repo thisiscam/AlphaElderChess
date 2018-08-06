@@ -43,7 +43,7 @@ class MCTSPlayer(object):
                 # self-play training)
                 move_index = np.random.choice(
                     len(acts),
-                    p=0.75*probs + 0.25*np.random.dirichlet(0.03 * np.ones(len(probs)))
+                    p=0.75*probs + 0.25*np.random.dirichlet(0.3 * np.ones(len(probs)))
                 )
                 # update the root node and reuse the search tree
                 self.mcts.update_with_move_index(board, move_index)
