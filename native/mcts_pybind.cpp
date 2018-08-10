@@ -118,7 +118,7 @@ PYBIND11_MODULE(elder_chess_native, m) {
                     double* _hiddens_states = _board_states + eval_batch_size * 9 * 4 * 4;
                     double* _remaining_steps_states = _hiddens_states + eval_batch_size * 2 * 4;
                     for(int i = 0; i < batch_size; i++) {
-                        fill_compact_state(boards[i], (double(&)[9][4][4])_board_states[i * 3 * 4 * 4], (double(&)[2][4])_hiddens_states[i * 2 * 4], _remaining_steps_states[i]);
+                        fill_compact_state(boards[i], (double(&)[9][4][4])_board_states[i * 9 * 4 * 4], (double(&)[2][4])_hiddens_states[i * 2 * 4], _remaining_steps_states[i]);
                     }
 
                     {

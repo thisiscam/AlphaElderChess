@@ -75,46 +75,74 @@ void MCTS<State>::_playout_batch(const State& state, std::size_t n_playout, Rand
     std::vector<State> batch_states(_eval_batch_size);
     std::vector<TreeNode<State>*> batch_nodes(_eval_batch_size);
     std::vector<std::vector<int>> batch_players(_eval_batch_size);
+
     std::vector<MCTS<State>::EvalResult> batch_eval_results(_eval_batch_size);
-    
+    std::vector<double> batch_ended_results(_eval_batch_size);
+
     std::vector<double> compact_state_buffer(_compact_state_size * _eval_batch_size);
 
-    std::size_t current_batch_idx = 0;
+    int total_ended_count = 0;
+
+    int eval_count = 0;
+    int ended_count = 0; // Trick: ended games are stored reverse in the above buffers
+
+    int nn_eval_count = 0;
+
     for(int i = 0; i < n_playout; i++) {
-        batch_states[current_batch_idx] = state;
+        batch_states[eval_count] = state;
         std::vector<int> players;
         double leaf_value = 0.;
         bool game_ended = false;
-        TreeNode<State>* node = _playout_single_path(batch_states[current_batch_idx], players, leaf_value, game_ended, rng);
+        TreeNode<State>* node = _playout_single_path(batch_states[eval_count], players, leaf_value, game_ended, rng);
+        
+        int idx;
         if(game_ended) {
-            _backprop_single_path(node, leaf_value, players);
-        } else {
-            batch_nodes[current_batch_idx] = node;
-            batch_players[current_batch_idx] = std::move(players);
-            current_batch_idx++;
-            if(current_batch_idx == _eval_batch_size) {
-                _eval_and_backprop_batch(batch_nodes, batch_states, batch_players, compact_state_buffer, batch_eval_results, _eval_batch_size);
-                current_batch_idx = 0;
+            if(eval_count == 0) {
+                // can treat this as single playout
+                assert(ended_count == 0);
+                _backprop_single_path(node, leaf_value, players);
+                total_ended_count++;
+                continue;
+            } else {
+                idx = _eval_batch_size - ended_count - 1;
+                batch_ended_results[idx] = leaf_value;
+                ended_count++;
+                total_ended_count++;
             }
+        } else {
+            idx = eval_count;
+            eval_count++;
+        }
+
+        batch_nodes[idx] = node;
+        batch_players[idx] = std::move(players);
+
+        if(eval_count + ended_count == _eval_batch_size) {
+            nn_eval_count += _eval_and_backprop_batch(batch_nodes, batch_states, batch_players, batch_ended_results, compact_state_buffer, batch_eval_results, eval_count);
+            eval_count = 0;
+            ended_count = 0;
         }
     }
     /* Backprop any residuals */
-    if(current_batch_idx > 0) {
-        _eval_and_backprop_batch(batch_nodes, batch_states, batch_players, compact_state_buffer, batch_eval_results, current_batch_idx);
+    if(eval_count + ended_count > 0) {
+        nn_eval_count += _eval_and_backprop_batch(batch_nodes, batch_states, batch_players, batch_ended_results, compact_state_buffer, batch_eval_results, eval_count);
     }
+    // std::cout << "ok" << total_ended_count << " " << nn_eval_count << " " << total_ended_count + nn_eval_count << std::endl;
 }
 
 template<typename State>
-void MCTS<State>::_eval_and_backprop_batch(
+int MCTS<State>::_eval_and_backprop_batch(
     const std::vector<TreeNode<State>*>& nodes, 
     const std::vector<State>& states, 
     const std::vector<std::vector<int>>& players, 
+    const std::vector<double>& batch_ended_results,
     const std::vector<double>& compact_state_buffer,
     std::vector<MCTS<State>::EvalResult>& eval_results,
-    int batch_size) 
+    int eval_count) 
 {
-    this->_policy_fn(states, eval_results, batch_size, (void*)compact_state_buffer.data());
-    for(int i = 0; i < batch_size; i++) {
+    int valid_cnt = 0;
+    this->_policy_fn(states, eval_results, eval_count, (void*)compact_state_buffer.data());
+    for(int i = 0; i < eval_count; i++) {
         TreeNode<State>* node = nodes[i];
         auto&& policy_value_pair = eval_results[i];
         bool do_backprop = false;
@@ -122,15 +150,20 @@ void MCTS<State>::_eval_and_backprop_batch(
         if(node->is_leaf()) {
             node->expand(policy_value_pair.first);
             do_backprop = true;
+            valid_cnt ++;
         }
         node->unlock();
         if(do_backprop) {
-			double leaf_value = policy_value_pair.second;
-        	_backprop_single_path(node, leaf_value, players[i]);
+            double leaf_value = policy_value_pair.second;
+            _backprop_single_path(node, leaf_value, players[i]);
         } else {
-        	_remove_virtual_losses(node);
+            _remove_virtual_losses(node);
         }
     }
+    for(int i = eval_count; i < _eval_batch_size; i++) {
+        _backprop_single_path(nodes[i], batch_ended_results[i], players[i]);
+    }
+    return valid_cnt;
 }
 
 template<typename State>
@@ -151,16 +184,16 @@ void MCTS<State>::_backprop_single_path(TreeNode<State>* node, double leaf_value
     }
     node_back_it->_n_visit++;
     node_back_it->remove_virtual_loss();
-	assert(node_back_it == _current_root);
-	// _current_root->debug_check_n_visit();
+    assert(node_back_it == _current_root);
+    // _current_root->debug_check_n_visit();
 }
 
 template<typename State>
 void MCTS<State>::_remove_virtual_losses(TreeNode<State>* node) {
-	do {
-		node->remove_virtual_loss();
-		node = node->_parent;
-	} while(node != _current_root->_parent);
+    do {
+        node->remove_virtual_loss();
+        node = node->_parent;
+    } while(node != _current_root->_parent);
 }
 
 

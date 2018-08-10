@@ -94,9 +94,10 @@ private:
 
 	void _remove_virtual_losses(TreeNode<State>* node);
 
-	void _eval_and_backprop_batch(const std::vector<TreeNode<State>*>& nodes, 
+	int _eval_and_backprop_batch(const std::vector<TreeNode<State>*>& nodes, 
 		const std::vector<State>& states, 
 		const std::vector<std::vector<int>>& players, 
+		const std::vector<double>& batch_ended_results,
     	const std::vector<double>& compact_state_buffer,
 		std::vector<MCTS<State>::EvalResult>& eval_results, 
 		int batch_size

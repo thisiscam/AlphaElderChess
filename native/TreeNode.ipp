@@ -61,7 +61,7 @@ double TreeNode<State>::get_U_value(double c_puct) const {
 	if(_n_visit == 0) {
 		return prior_adjust;
 	} else {
-		return _W / (_n_visit + _virtual_loss) + prior_adjust;
+		return (_W - _virtual_loss) / (_n_visit + _virtual_loss) + prior_adjust;
 	}
 }
 
