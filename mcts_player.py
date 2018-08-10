@@ -1,4 +1,4 @@
-from elder_chess_native import MCTS, move_probs_to_one_hot
+from .elder_chess_native import MCTS, move_probs_to_one_hot
 import numpy as np
 
 class MCTSPlayer(object):

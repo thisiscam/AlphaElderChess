@@ -1,7 +1,7 @@
-from elder_chess_native import Board, Move
-from mcts_player import MCTSPlayer
-from elder_chess_game_server import ElderChessGameServer
-from tensorflow_policy import PolicyValueNet
+from .elder_chess_native import Board, Move
+from .mcts_player import MCTSPlayer
+from .elder_chess_game_server import ElderChessGameServer
+from .tensorflow_policy import PolicyValueNet
 
 from xmlrpc.server import SimpleXMLRPCServer
 import argparse
@@ -36,7 +36,7 @@ def try_parse(cmd):
 class MyObject:
 
     def __init__(self):
-        self.policy_value_net = PolicyValueNet(4, 4, model_file=args.model)
+        self.policy_value_net = PolicyValueNet(model_file=args.model)
         self.boards = {}
         self.mcts_players = {}
 

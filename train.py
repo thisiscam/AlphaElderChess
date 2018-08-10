@@ -9,12 +9,12 @@ from __future__ import print_function
 import random
 import numpy as np
 from collections import defaultdict, deque
-from elder_chess_native import Board
-from elder_chess_game_server import ElderChessGameServer
-from mcts_player import MCTSPlayer
+from .elder_chess_native import Board
+from .elder_chess_game_server import ElderChessGameServer
+from .mcts_player import MCTSPlayer
 # from policy_value_net import PolicyValueNet  # Theano and Lasagne
 # from policy_value_net_pytorch import PolicyValueNet  # Pytorch
-from tensorflow_policy import PolicyValueNet # Tensorflow
+from .tensorflow_policy import PolicyValueNet # Tensorflow
 # from policy_value_net_keras import PolicyValueNet # Keras
 
 
@@ -46,15 +46,11 @@ class TrainPipeline():
         if init_model:
             print("starting from model: ", init_model)
             # start training from an initial policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height,
-                                                   model_file=init_model)
+            self.policy_value_net = PolicyValueNet(model_file=init_model)
         else:
             # start training from a new policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height)
-        self.duplicate_policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height)
+            self.policy_value_net = PolicyValueNet()
+        self.duplicate_policy_value_net = PolicyValueNet()
         self.backup_policy()
         self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value,
                                       c_puct=self.c_puct,

@@ -1,4 +1,4 @@
-from elder_chess_native import Board
+from .elder_chess_native import Board
 import numpy as np
 
 class ElderChessGameServer(object):
