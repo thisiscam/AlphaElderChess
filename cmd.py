@@ -23,6 +23,15 @@ player_dict = {
     "MCTSPlayer": mcts_player
 }
 
-game_server = ElderChessGameServer()
-p1, p2 = player_dict[args.p1](), player_dict[args.p2]()
-game_server.start_play(p1, p2, is_shown=True)
+def mcts_player_at_branch(commit_tag, tmp_repo_path='./tmp/AEC'):
+    subprocess.check_call(['git','checkout', commit_tag], cwd=tmp_repo_path)
+    subprocess.check_call(['git','submodule', 'update', '--init', '--recursive'], cwd=tmp_repo_path)
+    print("Compiling native...")
+    subprocess.check_call(['mkdir', '-p', 'native/build'], cwd=tmp_repo_path)
+    subprocess.check_call(['cmake', '..'], cwd=os.path.join(tmp_repo_path, "native/build/"))
+    subprocess.check_call(['make', '-C', 'native/build'], cwd=tmp_repo_path)
+    
+mcts_player_at_branch('0334e0e')
+# game_server = ElderChessGameServer()
+# p1, p2 = player_dict[args.p1](), player_dict[args.p2]()
+# game_server.start_play(p1, p2, is_shown=True)
