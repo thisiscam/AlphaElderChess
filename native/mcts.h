@@ -31,7 +31,7 @@ public:
 	void expand(const std::vector<std::pair<Move, double>>& priors);
 
 	template<typename RandomEngine>
-	std::pair<Move, TreeNode<State>*> select(double c_puct, RandomEngine*) const;
+	std::pair<Move, TreeNode<State>*> select(double c_puct, int depth, RandomEngine*) const;
 
 	template<typename RandomEngine>
 	std::pair<Move, TreeNode<State>*> env_select(RandomEngine*) const;
@@ -115,6 +115,8 @@ private:
 	std::size_t _thread_pool_size;
 
 	threading::ThreadPool _pool;
+
+	int _depth = 0;
 };
 
 #include "mcts.ipp"

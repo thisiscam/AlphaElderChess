@@ -16,25 +16,14 @@ void TreeNode<State>::expand(const std::vector<std::pair<typename State::Move, d
 
 template<typename State>
 template<typename RandomEngine>
-std::pair<typename State::Move, TreeNode<State>*> TreeNode<State>::select(double c_puct, RandomEngine* rng) const {
-	double best_score = std::numeric_limits<double>::lowest();
-	std::vector<std::pair<typename State::Move, TreeNode<State>*>> bests;
-	for(auto child : _children) {
-		double score = child.second->get_U_value(c_puct);
-		if(score > best_score) {
-			bests.clear();
-			bests.push_back(child);
-			best_score = score;
-		} else if (score == best_score) {
-			bests.push_back(child);
-		}
-	}
-	if(bests.size() == 1) {
-		return bests[0];
-	}
-	std::uniform_int_distribution<int> dst(0, bests.size() - 1);
-	int idx = dst(*rng);
-	return bests[idx];
+std::pair<typename State::Move, TreeNode<State>*> TreeNode<State>::select(double c_puct, int depth, RandomEngine* rng) const {
+	std::vector<double> weights;
+	std::transform(
+		_children.begin(), _children.end(), std::back_inserter(weights), 
+		[c_puct, depth](auto it) { return exp(it.second->get_U_value(c_puct) * depth / 10); }
+	);
+	std::discrete_distribution<int> dist(std::begin(weights), std::end(weights));
+	return _children[dist(*rng)];
 }
 
 template<typename State>
@@ -61,7 +50,7 @@ double TreeNode<State>::get_U_value(double c_puct) const {
 	if(_n_visit == 0) {
 		return prior_adjust;
 	} else {
-		return (_W - _virtual_loss) / (_n_visit + _virtual_loss) + prior_adjust;
+		return _W / _n_visit + prior_adjust;
 	}
 }
 
@@ -88,12 +77,12 @@ void TreeNode<State>::unlock() {
 
 template<typename State>
 void TreeNode<State>::add_virtual_loss() {
-	_virtual_loss += 1;
+	// _virtual_loss += 1;
 }
 
 template<typename State>
 void TreeNode<State>::remove_virtual_loss() {
-	_virtual_loss -= 1;
+	// _virtual_loss -= 1;
 }
 
 template<typename State>

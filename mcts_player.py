@@ -10,7 +10,7 @@ class MCTSPlayer(object):
     """AI player based on MCTS"""
 
     def __init__(self, policy_value_function,
-                 c_puct=5, n_playout=2000, is_selfplay=False, name="", num_parallel_workers=1, parallel_mcts_eval_batch_size=4):
+                 c_puct=5, n_playout=2000, is_selfplay=False, name="", num_parallel_workers=1, parallel_mcts_eval_batch_size=8):
         self.mcts = MCTS(policy_value_function, float(c_puct), n_playout, num_parallel_workers, parallel_mcts_eval_batch_size)
         self._is_selfplay = is_selfplay
         self.name = name

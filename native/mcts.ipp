@@ -44,7 +44,7 @@ TreeNode<State>* MCTS<State>::_playout_single_path(State& state, std::vector<int
                 node = action_node.second;
                 state.do_move(action_node.first);
             } else {
-                auto action_node = node->select(_c_puct, rng);
+                auto action_node = node->select(_c_puct, _depth + players.size(), rng);
                 node = action_node.second;
                 state.do_move(action_node.first);
             }
@@ -231,6 +231,7 @@ void MCTS<State>::update_with_move_index(State curState, std::uint16_t move_inde
     if(nextState.is_env_move() && _current_root->is_leaf()) {
         _current_root->expand(nextState.get_env_move_weights());
     }
+    _depth += 1;
 }
 
 template<typename State>
@@ -254,4 +255,5 @@ void MCTS<State>::reset() {
     delete _root;
     _root = new TreeNode<State>(nullptr, 1.0);
     _current_root = _root;
+    _depth = 0;
 }
