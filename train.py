@@ -9,12 +9,12 @@ from __future__ import print_function
 import random
 import numpy as np
 from collections import defaultdict, deque
-from elder_chess_native import Board
-from elder_chess_game_server import ElderChessGameServer
-from mcts_player import MCTSPlayer
+from .elder_chess_native import Board
+from .elder_chess_game_server import ElderChessGameServer
+from .mcts_player import MCTSPlayer
 # from policy_value_net import PolicyValueNet  # Theano and Lasagne
 # from policy_value_net_pytorch import PolicyValueNet  # Pytorch
-from tensorflow_policy import PolicyValueNet # Tensorflow
+from .tensorflow_policy import PolicyValueNet # Tensorflow
 # from policy_value_net_keras import PolicyValueNet # Keras
 
 

@@ -1,7 +1,7 @@
 from wxpy import *
 from PIL import Image, ImageDraw
 
-from elder_chess_native import Move
+from .elder_chess_native import Move
 
 from xmlrpc.client import ServerProxy
 chess_api = ServerProxy("http://127.0.0.1:1027")

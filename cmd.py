@@ -1,9 +1,9 @@
 import argparse
-from human_player import HumanPlayer
-from mcts_player import MCTSPlayer
-from elder_chess_game_server import ElderChessGameServer
-from tensorflow_policy import PolicyValueNet # Tensorflow
-from elder_chess_native import Board
+from .human_player import HumanPlayer
+from .mcts_player import MCTSPlayer
+from .elder_chess_game_server import ElderChessGameServer
+from .tensorflow_policy import PolicyValueNet # Tensorflow
+from .elder_chess_native import Board
 
 parser = argparse.ArgumentParser(description='command line game')
 parser.add_argument('--p1', type=str, default="HumanPlayer", help='player 1')
