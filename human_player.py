@@ -1,4 +1,4 @@
-from elder_chess_native import Move
+from .elder_chess_native import Move
 
 class HumanPlayer(object):
     """
