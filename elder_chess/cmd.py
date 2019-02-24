@@ -5,10 +5,10 @@ from .elder_chess_game_server import ElderChessGameServer
 from .elder_chess_native import Board
 
 
-def mcts_player():
-    from tensorflow_policy import PolicyValueNet # Tensorflow
+def mcts_player(name=""):
+    from .tensorflow_policy import PolicyValueNet # Tensorflow
     policy_value_net = PolicyValueNet(model_file="models/best_policy.model")
-    return MCTSPlayer(policy_value_net.policy_value, c_puct=5, n_playout=10000, is_selfplay=False)
+    return MCTSPlayer(policy_value_net.policy_value, c_puct=5, n_playout=10000, is_selfplay=False, name=name)
 
 def mcts_player_at_branch(git_commit, n_playout, name='', tmp_repo_path='./tmp/AEC'):
     build_dir = "build_" + git_commit
@@ -63,7 +63,7 @@ for i in range(args.num_plays):
         p1, p2 = args.p1, args.p2
     else:
         p1, p2 = args.p2, args.p1
-    winner = game_server.start_play(p1, p2, temp=1., is_shown=True)
+    winner = game_server.start_play(p1, p2, is_shown=True)
     win_cnt[winner] += 1
-win_ratio = 1.0*(win_cnt[args.p1] + 0.5*win_cnt[None]) / n_games
+win_ratio = 1.0*(win_cnt[args.p1] + 0.5*win_cnt[None]) / args.num_plays
 print("win: {}, lose: {}, tie:{}".format(win_cnt[args.p1], win_cnt[args.p2], win_cnt[None]))

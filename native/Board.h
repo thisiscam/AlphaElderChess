@@ -23,7 +23,7 @@ public:
 	static const Move no_move;
 
 	static const int DEFAULT_MAX_STEPS = dynamic_steps ? 8 : 40 ;
-	const int SIDE = 4;
+	static const int SIDE = 4;
 
 	Board():Board(DEFAULT_MAX_STEPS) { }
 
@@ -47,8 +47,16 @@ public:
 		return board[i][j];
 	}
 
-	inline const int remaining_steps() const {
-		return maxSteps - steps;
+	inline const int get_remaining_steps() const {
+		if(dynamic_steps) {
+			return remaining_steps;
+		} else {
+			return maxSteps - steps;
+		}
+	}
+
+	inline const int get_total_steps() const {
+		return steps;
 	}
 
 	inline void do_move(Move m);
@@ -113,6 +121,8 @@ private:
 	Move about_to_flip = Move(Move::Type::NONE, 0, 0);
 
 	int steps = 0;
+	int remaining_steps;
+
 	int maxSteps;
 	Piece board[4][4];
 

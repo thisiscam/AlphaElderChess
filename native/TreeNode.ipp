@@ -19,14 +19,15 @@ std::pair<typename State::Move, TreeNode<State>*> TreeNode<State>::select(double
 }
 
 template<typename State>
-std::pair<typename State::Move, TreeNode<State>*> TreeNode<State>::env_select() const {
+template<typename RandomEngine>
+std::pair<typename State::Move, TreeNode<State>*> TreeNode<State>::env_select(RandomEngine* rng) const {
 	std::vector<double> weights;
 	std::transform(
 		_children.begin(), _children.end(), std::back_inserter(weights), 
 		[](auto it) { return it.second->_prior; }
 	);
 	std::discrete_distribution<int> dist(std::begin(weights), std::end(weights));
-	return _children[dist(rng)];
+	return _children[dist(*rng)];
 }
 
 template<typename State>

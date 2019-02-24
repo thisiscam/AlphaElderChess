@@ -29,7 +29,6 @@ class TrainPipeline():
         # training params
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
-        self.temp = 1.0  # the temperature param
         self.n_playout = 1000  # num of simulations for each move
         self.c_puct = 5
         self.buffer_size = 50000
@@ -95,8 +94,7 @@ class TrainPipeline():
     def collect_selfplay_data(self, n_games=1):
         """collect self-play data for training"""
         for i in range(n_games):
-            winner, play_data = self.game.start_self_play(self.mcts_player,
-                                                          temp=self.temp)
+            winner, play_data = self.game.start_self_play(self.mcts_player)
             play_data = list(play_data)[:]
             self.episode_len = len(play_data)
             # augment the data
@@ -170,7 +168,7 @@ class TrainPipeline():
                 p1, p2 = current_mcts_player, old_mcts_player
             else:
                 p1, p2 = old_mcts_player, current_mcts_player
-            winner = self.game.start_play(p1, p2, temp=1., is_shown=True)
+            winner = self.game.start_play(p1, p2, is_shown=True)
             win_cnt[winner] += 1
         win_ratio = 1.0*(win_cnt[current_mcts_player] + 0.5*win_cnt[None]) / n_games
         print("win: {}, lose: {}, tie:{}".format(win_cnt[current_mcts_player], win_cnt[old_mcts_player], win_cnt[None]))

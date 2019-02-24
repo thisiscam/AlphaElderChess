@@ -25,7 +25,7 @@ class ElderChessGameServer(object):
             for player in players:
                 player.other_do_move(self.board, env_move)
 
-    def start_play(self, player1, player2, temp=1., is_shown=True):
+    def start_play(self, player1, player2, is_shown=True):
         """start a game between two players"""
         self.init_board()
         self.reset_player(player1, player2)
@@ -36,7 +36,7 @@ class ElderChessGameServer(object):
         while True:
             current_player = self.board.get_current_player()
             player_in_turn = players[current_player]
-            move = player_in_turn.get_action(self.board, temp=temp)
+            move = player_in_turn.get_action(self.board)
 
             if self.board.do_move_safe(move):
                 players[1 - current_player].other_do_move(self.board, move)
@@ -58,7 +58,7 @@ class ElderChessGameServer(object):
                         print("Game end. Tie")
                 return players[winner] if winner >= 0 else None
 
-    def start_self_play(self, player, is_shown=False, temp=1e-3):
+    def start_self_play(self, player, is_shown=False):
         """ start a self-play game using a MCTS player, reuse the search tree,
         and store the self-play data: (state, mcts_probs, z) for training
         """
@@ -66,9 +66,7 @@ class ElderChessGameServer(object):
         self.reset_player(player)
         states, mcts_probs, current_players = [], [], []
         while True:
-            move, move_probs = player.get_action(self.board,
-                                                 temp=temp,
-                                                 return_prob=True)
+            move, move_probs = player.get_action(self.board, return_prob=True)
             # store the data
             states.append(self.board.get_compact_state())
             mcts_probs.append(move_probs)

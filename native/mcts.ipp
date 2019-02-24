@@ -1,5 +1,6 @@
 template<typename State>
-void MCTS<State>::_playout(State state) {
+template<typename RandomEngine>
+void MCTS<State>::_playout(State state, RandomEngine* rng) {
 	TreeNode<State>* node = _current_root;
 	std::vector<int> players;
 	while(true) {
@@ -7,7 +8,7 @@ void MCTS<State>::_playout(State state) {
 		if(node->is_leaf()) {
 			if(state.is_env_move()) {
 				node->expand(state.get_env_move_weights());
-				auto action_node = node->env_select();
+				auto action_node = node->env_select(rng);
 				node = action_node.second;
 				state.do_move(action_node.first);
 			} else {
@@ -15,7 +16,7 @@ void MCTS<State>::_playout(State state) {
 			}
 		} else {
 			if(state.is_env_move()) {
-				auto action_node = node->env_select();
+				auto action_node = node->env_select(rng);
 				node = action_node.second;
 				state.do_move(action_node.first);
 			} else {
@@ -62,7 +63,7 @@ void MCTS<State>::_playout(State state) {
 template<typename State>
 std::pair<std::vector<typename State::Move>, std::vector<double>> MCTS<State>::get_move_probs(State& state, bool small_temp) {
 	for(int i = 0; i < _n_playout; i++) {
-		_playout(state);
+		_playout(state, &rng);
 	}
 	if(small_temp) {
 		std::vector<typename State::Move> moves(_current_root->_children.size());

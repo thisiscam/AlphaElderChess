@@ -52,7 +52,7 @@ Side Board<ds>::get_winner() const {
 	if(_piecesDominating(Sides::PLAYER_1)) {
 		return Sides::PLAYER_1;
 	}
-	if(steps >= maxSteps) {
+	if(get_remaining_steps() == 0) {
 		if(p1Moves.size() > p0Moves.size()) {
 			return Sides::PLAYER_1;
 		}
@@ -150,7 +150,7 @@ void Board<ds>::_sync_on_board(int x, int y) {
 	if(!p.isEmpty()) {
 		onBoardPieces[p.getSide()][p.value] --;
 		if(ds) {
-			steps = 0;
+			remaining_steps = maxSteps;
 		}
 	}
 }
@@ -167,7 +167,7 @@ void Board<ds>::do_move(Move m) {
 			player_to_move = 1 - (- (player_to_move + 1));
 			board[x][y] = p;
 			if(ds) {
-				steps = 1;
+				remaining_steps = maxSteps - 1;
 			}
 			break;
 		}
@@ -175,10 +175,9 @@ void Board<ds>::do_move(Move m) {
 			about_to_flip = m;
 			player_to_move = - player_to_move - 1;
 			if(ds) {
-				steps = 0;
-			} else {
-				steps++;
+				remaining_steps = maxSteps;
 			}
+			steps++;
 			break;
 		}
 		case Move::Type::UP: {
@@ -187,6 +186,7 @@ void Board<ds>::do_move(Move m) {
 			board[m.x][m.y] = Piece::empty();
 			player_to_move = 1 - player_to_move;
 			steps++;
+			remaining_steps--;
 			break;
 		}
 		case Move::Type::DOWN: {
@@ -195,6 +195,7 @@ void Board<ds>::do_move(Move m) {
 			board[m.x][m.y] = Piece::empty();
 			player_to_move = 1 - player_to_move;
 			steps++;
+			remaining_steps--;
 			break;
 		}
 		case Move::Type::LEFT: {
@@ -203,6 +204,7 @@ void Board<ds>::do_move(Move m) {
 			board[m.x][m.y] = Piece::empty();
 			player_to_move = 1 - player_to_move;
 			steps++;
+			remaining_steps--;
 			break;
 		}
 		case Move::Type::RIGHT: {
@@ -211,6 +213,7 @@ void Board<ds>::do_move(Move m) {
 			board[m.x][m.y] = Piece::empty();
 			player_to_move = 1 - player_to_move;
 			steps++;
+			remaining_steps--;
 			break;
 		}
 		default: {
@@ -327,7 +330,8 @@ Move Board<ds>::do_random_move(RandomEngine *engine) {
 template<bool ds>
 Board<ds>::Board(int maxSteps) :
 	maxSteps(maxSteps),
-	hiddenPiecesCount(Board::SIDE * Board::SIDE) 
+	remaining_steps(maxSteps),
+	hiddenPiecesCount(Board::SIDE * Board::SIDE)
 {
 	for(int i = 0; i < Board::SIDE; i++) {
 		for(int j = 0; j < Board::SIDE; j++) {
@@ -347,7 +351,7 @@ Board<ds>::Board(int maxSteps) :
 
 template<bool ds>
 void Board<ds>::print(std::ostream &os) const {
-	os << "turn " << steps << "/" << maxSteps << "  Rem: " << remaining_steps() <<std::endl;
+	os << "turn " << steps << "  Rem: " << get_remaining_steps() <<std::endl;
 	os << (get_current_player() == Sides::PLAYER_0 ? "W" : "B") << " | 0| 1| 2| 3|" << std::endl;
 	for(int i = 0; i < 4; i++) {
 		os << i << " |";

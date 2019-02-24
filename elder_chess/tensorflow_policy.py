@@ -24,8 +24,8 @@ class PolicyValueNet():
             self.remaining_steps_state = tf.placeholder(tf.float32, shape=[None, 1], name="remaining_steps_state")
 
             self.w1_ = tf.layers.dense(inputs=self.hidden_pieces_state, units=16, activation=tf.nn.relu)
-            self.w1_flaten = tf.reshape(self.w1_, [-1, 2 * 16])
-            self.w1 = tf.layers.dense(inputs=self.w1_flaten, units=32, activation=tf.nn.relu)
+            self.w1_flatten = tf.reshape(self.w1_, [-1, 2 * 16])
+            self.w1 = tf.layers.dense(inputs=self.w1_flatten, units=32, activation=tf.nn.relu)
 
             self.w2 = tf.layers.dense(inputs=self.remaining_steps_state, units=32, activation=tf.nn.relu)
 
