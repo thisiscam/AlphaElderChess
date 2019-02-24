@@ -120,10 +120,17 @@ PYBIND11_MODULE(elder_chess_native, m) {
         			auto move_probs_buf = move_probs.unchecked<1>();
         			std::vector<Move> available_moves = b.get_moves();
 					std::vector<std::pair<Move, double>> available_moves_probs(available_moves.size());
+					double normalizer = 0.;
+                    for(int i = 0; i < available_moves.size(); i++) {
+						Move m = available_moves[i];
+                    	normalizer += move_probs_buf(m.y + m.x * 4 + ((int)m.type) * 4 * 4);
+                    }
 					for(int i = 0; i < available_moves.size(); i++) {
 						Move m = available_moves[i];
-						available_moves_probs[i] = 
-							std::make_pair(m, move_probs_buf(m.y + m.x * 4 + ((int)m.type) * 4 * 4));
+						available_moves_probs[i] = std::make_pair(
+							m, 
+							move_probs_buf(m.y + m.x * 4 + ((int)m.type) * 4 * 4) / normalizer
+						);
 					}
 					return std::make_pair(available_moves_probs, value);
         		},
@@ -177,9 +184,17 @@ PYBIND11_MODULE(elder_chess_native, m) {
                             std::vector<Move>&& available_moves = boards[i].get_moves();
                             BatchMCTS<Board_>::EvalResult& result = results[i];
                             result.first.resize(available_moves.size());
+                            double normalizer = 0.;
+                            for(int j = 0; j < available_moves.size(); j++) {
+								Move m = available_moves[j];
+                            	normalizer += move_probs_buf(i, m.y + m.x * 4 + ((int)m.type) * 4 * 4);
+                            }
                             for(int j = 0; j < available_moves.size(); j++) {
                                 Move m = available_moves[j];
-                                result.first[j] = std::make_pair(m, move_probs_buf(i, m.y + m.x * 4 + ((int)m.type) * 4 * 4));
+                                result.first[j] = std::make_pair(
+                                	m,
+                                	move_probs_buf(i, m.y + m.x * 4 + ((int)m.type) * 4 * 4) / normalizer
+                                );
                                 result.second = values_buf(i, 0);
                             }
                         }

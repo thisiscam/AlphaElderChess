@@ -370,6 +370,22 @@ void Board<ds>::print(std::ostream &os) const {
 		os << onBoardPieces[Sides::PLAYER_1][i] << "|";
 	}
 	os << std::endl;
+
+	int hidden_counts[2][4] = {0};
+	for(int i = 0; i < hiddenPieces.size(); i++) {
+		hidden_counts[hiddenPieces[i].getSide()][hiddenPieces[i].value] = hiddenPiecesCounts[i];
+	}
+
+	os << "HiddenW:"; 
+	for(int i = 0; i < 4; i++) {
+		os << hidden_counts[Sides::PLAYER_0][i] << "|";
+	}
+	os << std::endl;
+	os << "HiddenB:";
+	for(int i = 0; i < 4; i++) {
+		os << hidden_counts[Sides::PLAYER_1][i] << "|";
+	}
+	os << std::endl;
 }
 
 template<bool ds>
